@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | SBI Mutual Fund Agent QA Portal{% endblock %}
+
+{% block content %}
+<div class="dashboard-title-area">
+    <h1>QA Analytics Dashboard</h1>
+    <p>Real-time performance metrics and evaluation reports of SBI Mutual Fund sales representatives.</p>
+</div>
+
+<!-- KPI Cards Grid -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon-wrapper calls">
+            <i class="fa-solid fa-phone-volume"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Total Calls Evaluated</h3>
+            <div class="kpi-value">{{ stats.total_calls }}</div>
+        </div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-icon-wrapper score">
+            <i class="fa-solid fa-award"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Average QA Score</h3>
+            <div class="kpi-value">{{ stats.avg_score }}/100</div>
+        </div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-icon-wrapper ready">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="kpi-info">
+            <h3>Production Ready</h3>
+            <div class="kpi-value">
+                {% set ready_count = stats.readiness.get('Production Ready', 0) + stats.readiness.get('Ready With Supervision', 0) %}
+                {% if stats.total_calls > 0 %}
+                    {{ ((ready_count / stats.total_calls) * 100) | int }}%
+                {% else %}
+                    0%
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sessions List Section -->
+<div class="section-card">
+    <div class="section-header">
+        <h2>Session Evaluations</h2>
+        <span class="logo-badge">{{ reports|length }} Records</span>
+    </div>
+    
+    {% if reports %}
+        <div class="table-responsive">
+            <table class="reports-table">
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Room</th>
+                        <th>Call Date</th>
+                        <th>Duration</th>
+                        <th>QA Score</th>
+                        <th>Readiness Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                        <tr>
+                            <td class="col-job" title="{{ r.job_id }}">{{ r.job_id[:12] }}...</td>
+                            <td class="col-room"><i class="fa-regular fa-comments text-secondary" style="margin-right: 6px;"></i> {{ r.room }}</td>
+                            <td>{{ format_datetime(r.started_at) }}</td>
+                            <td>{{ format_duration(r.duration_seconds) }}</td>
+                            <td>
+                                {% set s = r.overall_score %}
+                                {% if s >= 80 %}
+                                    <span class="score-badge high">{{ s }}/100</span>
+                                {% elif s >= 50 %}
+                                    <span class="score-badge medium">{{ s }}/100</span>
+                                {% else %}
+                                    <span class="score-badge low">{{ s }}/100</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set status = r.scores.readiness %}
+                                {% if status == 'Production Ready' %}
+                                    <span class="readiness-badge ready"><i class="fa-solid fa-circle-check"></i> Production Ready</span>
+                                {% elif status == 'Ready With Supervision' %}
+                                    <span class="readiness-badge supervision"><i class="fa-solid fa-user-shield"></i> Ready (Supervised)</span>
+                                {% elif status == 'Developing' %}
+                                    <span class="readiness-badge developing"><i class="fa-solid fa-person-digging"></i> Developing</span>
+                                {% elif status == 'Needs Significant Coaching' %}
+                                    <span class="readiness-badge coaching"><i class="fa-solid fa-triangle-exclamation"></i> Needs Coaching</span>
+                                {% elif status == 'Not Ready' %}
+                                    <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Not Ready</span>
+                                {% else %}
+                                    <span class="readiness-badge developing">{{ status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/reports/{{ r.job_id }}" class="action-btn">
+                                    <i class="fa-regular fa-folder-open"></i> View Card
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-microphone-slash"></i></div>
+            <h3>No Evaluations Found</h3>
+            <p style="margin-top: 8px;">Run your LiveKit agent to process and generate calls. Once a call ends, the session summary will appear here automatically.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Report: {{ report.job_id[:8] }} | SBI Mutual Fund Agent QA Portal{% endblock %}
+
+{% block content %}
+<a href="/" class="report-back-btn">
+    <i class="fa-solid fa-arrow-left-long"></i> Back to Dashboard
+</a>
+
+<!-- Header Meta Info Section -->
+<div class="report-header-section">
+    <div class="report-meta-info" style="flex: 1; min-width: 300px;">
+        <span class="logo-badge" style="margin-left: 0; margin-bottom: 12px; display: inline-block;">
+            <i class="fa-regular fa-id-card"></i> Session ID: {{ report.job_id }}
+        </span>
+        <h1>Room: {{ report.room }}</h1>
+        
+        <div class="meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">Started At</span>
+                <span class="meta-value"><i class="fa-regular fa-clock text-secondary" style="margin-right: 6px;"></i> {{ format_datetime(report.started_at) }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Ended At</span>
+                <span class="meta-value"><i class="fa-regular fa-clock text-secondary" style="margin-right: 6px;"></i> {{ format_datetime(report.ended_at) }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Call Duration</span>
+                <span class="meta-value"><i class="fa-solid fa-hourglass-half text-secondary" style="margin-right: 6px;"></i> {{ format_duration(report.duration_seconds) }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Readiness Assessment</span>
+                <span class="meta-value">
+                    {% set status = scores.readiness %}
+                    {% if status == 'Production Ready' %}
+                        <span class="readiness-badge ready" style="padding: 2px 8px;"><i class="fa-solid fa-circle-check"></i> {{ status }}</span>
+                    {% elif status == 'Ready With Supervision' %}
+                        <span class="readiness-badge supervision" style="padding: 2px 8px;"><i class="fa-solid fa-user-shield"></i> {{ status }}</span>
+                    {% elif status == 'Developing' %}
+                        <span class="readiness-badge developing" style="padding: 2px 8px;"><i class="fa-solid fa-person-digging"></i> {{ status }}</span>
+                    {% elif status == 'Needs Significant Coaching' %}
+                        <span class="readiness-badge coaching" style="padding: 2px 8px;"><i class="fa-solid fa-triangle-exclamation"></i> {{ status }}</span>
+                    {% elif status == 'Not Ready' %}
+                        <span class="readiness-badge notready" style="padding: 2px 8px;"><i class="fa-solid fa-circle-xmark"></i> {{ status }}</span>
+                    {% else %}
+                        <span class="readiness-badge developing" style="padding: 2px 8px;">{{ status }}</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Circular Score Gauge -->
+    <div class="report-overall-score-card">
+        {% set s = report.overall_score %}
+        {% if s >= 80 %}
+            {% set s_color = 'var(--color-success)' %}
+        {% elif s >= 50 %}
+            {% set s_color = 'var(--color-warning)' %}
+        {% else %}
+            {% set s_color = 'var(--color-danger)' %}
+        {% endif %}
+        
+        <div class="circle-gauge" style="--value: {{ s }}; --color: {{ s_color }};">
+            <div class="gauge-text">
+                <span class="gauge-num" style="color: {{ s_color }};">{{ s }}</span>
+                <span class="gauge-total">QA Score</span>
+            </div>
+        </div>
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Overall Rating</span>
+    </div>
+</div>
+
+<!-- Two Column Breakdown -->
+<div class="detail-grid">
+    <!-- Scorecard Criteria Column -->
+    <div class="score-breakdown-card">
+        <h2>Criteria Evaluation Scorecard</h2>
+        
+        {% set criteria_list = [
+            ('Rapport & Professionalism', scores.rapport, 'rapport'),
+            ('Discovery & Needs Analysis', scores.discovery, 'discovery'),
+            ('Product Knowledge', scores.product_knowledge, 'product_knowledge'),
+            ('Communication Skills', scores.communication, 'communication'),
+            ('Objection Handling', scores.objection_handling, 'objection_handling'),
+            ('Recommendation Quality', scores.recommendation_quality, 'recommendation_quality'),
+            ('Compliance & Ethical Conduct', scores.compliance, 'compliance'),
+            ('Closing Effectiveness', scores.closing, 'closing')
+        ] %}
+        
+        {% for label, score, key in criteria_list %}
+            <div class="score-bar-item">
+                <div class="score-bar-label">
+                    <span class="score-bar-name">{{ label }}</span>
+                    <span class="score-bar-val">{{ score }}/10</span>
+                </div>
+                {% set percentage = score * 10 %}
+                
+                {% if score >= 8 %}
+                    {% set bar_color = 'var(--color-success)' %}
+                {% elif score >= 5 %}
+                    {% set bar_color = 'var(--color-warning)' %}
+                {% else %}
+                    {% set bar_color = 'var(--color-danger)' %}
+                {% endif %}
+                
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ percentage }}%; background: {{ bar_color }};"></div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Summary Details Column -->
+    <div class="summary-markdown-card">
+        <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <i class="fa-solid fa-list-check" style="margin-right: 8px; color: var(--color-primary);"></i> Call Evaluation Details
+        </h2>
+        <div class="summary-content">
+            {% if summary_html %}
+                {{ summary_html | safe }}
+            {% else %}
+                <p style="color: var(--text-muted); font-style: italic;">No evaluation summary details are available for this session.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
