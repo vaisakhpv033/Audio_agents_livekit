@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
@@ -29,10 +30,11 @@ class ReportPayload(BaseModel):
     room: str
     started_at: str | None = None
     ended_at: str
-    summary: str | None = None
+    summary: dict | str | None = None
+    chat_history: dict | None = None
 
-def parse_summary_scores(summary_text: str | None) -> dict:
-    if not summary_text:
+def parse_summary_scores(summary_data: dict | str | None) -> dict:
+    if not summary_data:
         return {
             "overall": 0,
             "rapport": 0,
@@ -43,13 +45,39 @@ def parse_summary_scores(summary_text: str | None) -> dict:
             "recommendation_quality": 0,
             "compliance": 0,
             "closing": 0,
-            "readiness": "N/A"
+            "readiness": "N/A",
+            "is_structured": False
         }
     
+    # If summary is a dict (conforming to QAReportCard schema)
+    if isinstance(summary_data, dict):
+        return {
+            "overall": summary_data.get("overall_score", 0),
+            "rapport": summary_data.get("rapport", {}).get("score", 0),
+            "discovery": summary_data.get("discovery", {}).get("score", 0),
+            "product_knowledge": summary_data.get("product_knowledge", {}).get("score", 0),
+            "communication": summary_data.get("communication", {}).get("score", 0),
+            "objection_handling": summary_data.get("objection_handling", {}).get("score", 0),
+            "recommendation_quality": summary_data.get("recommendation_quality", {}).get("score", 0),
+            "compliance": summary_data.get("compliance", {}).get("score", 0),
+            "closing": summary_data.get("closing", {}).get("score", 0),
+            "readiness": summary_data.get("readiness_assessment", "Developing"),
+            "is_structured": True
+        }
+    
+    # If summary is a string, check if it is serialised JSON
+    if isinstance(summary_data, str) and summary_data.strip().startswith("{"):
+        try:
+            parsed = json.loads(summary_data)
+            return parse_summary_scores(parsed)
+        except Exception:
+            pass
+            
+    # Otherwise parse as markdown text (backward compatibility)
     scores = {}
     
     # Overall score
-    overall_match = re.search(r"Overall Score:\s*(\d+)", summary_text, re.IGNORECASE)
+    overall_match = re.search(r"Overall Score:\s*(\d+)", summary_data, re.IGNORECASE)
     scores["overall"] = int(overall_match.group(1)) if overall_match else 0
     
     # Category scores
@@ -65,7 +93,7 @@ def parse_summary_scores(summary_text: str | None) -> dict:
     }
     
     for name, pattern in categories.items():
-        m = re.search(pattern, summary_text, re.IGNORECASE)
+        m = re.search(pattern, summary_data, re.IGNORECASE)
         scores[name] = int(m.group(1)) if m else 0
         
     # Readiness Assessment
@@ -76,9 +104,9 @@ def parse_summary_scores(summary_text: str | None) -> dict:
         "Needs Significant Coaching",
         "Not Ready"
     ]
-    readiness = "Developing" # default fallback
+    readiness = "Developing"
     
-    readiness_section = re.search(r"### Readiness Assessment(.*?)(?:---|$$)", summary_text, re.DOTALL | re.IGNORECASE)
+    readiness_section = re.search(r"### Readiness Assessment(.*?)(?:---|$$)", summary_data, re.DOTALL | re.IGNORECASE)
     if readiness_section:
         section_text = readiness_section.group(1)
         for option in readiness_options:
@@ -87,12 +115,49 @@ def parse_summary_scores(summary_text: str | None) -> dict:
                 break
     else:
         for option in readiness_options:
-            if option.lower() in summary_text.lower():
+            if option.lower() in summary_data.lower():
                 readiness = option
                 break
                 
     scores["readiness"] = readiness
+    scores["is_structured"] = False
     return scores
+
+# Helper to deserialize and parse chat_history for UI rendering
+def clean_chat_history(chat_history_str: str | None) -> list:
+    if not chat_history_str:
+        return []
+    try:
+        data = json.loads(chat_history_str)
+        items = data.get("items", [])
+        cleaned = []
+        for item in items:
+            if item.get("type") != "message":
+                continue
+            
+            role = item.get("role")
+            if role == "system":
+                continue
+                
+            content_list = item.get("content", [])
+            text = ""
+            if isinstance(content_list, list):
+                text = " ".join([str(c) for c in content_list if isinstance(c, str)])
+            elif isinstance(content_list, str):
+                text = content_list
+                
+            if not text.strip():
+                continue
+                
+            cleaned.append({
+                "role": role,
+                "text": text,
+                "interrupted": item.get("interrupted", False)
+            })
+        return cleaned
+    except Exception as e:
+        print("Error parsing chat history:", e)
+        return []
 
 # Helper Jinja filter/function to format ISO datetimes
 def format_datetime(iso_str: str | None) -> str:
@@ -125,14 +190,26 @@ async def receive_report(payload: ReportPayload):
         # Parse scores to store the overall score in DB
         scores = parse_summary_scores(payload.summary)
         
+        summary_str = None
+        if payload.summary:
+            if isinstance(payload.summary, dict):
+                summary_str = json.dumps(payload.summary)
+            else:
+                summary_str = payload.summary
+                
+        chat_history_str = None
+        if payload.chat_history:
+            chat_history_str = json.dumps(payload.chat_history)
+            
         save_report(
             job_id=payload.job_id,
             room_id=payload.room_id,
             room=payload.room,
             started_at=payload.started_at,
             ended_at=payload.ended_at,
-            summary=payload.summary,
-            overall_score=scores["overall"]
+            summary=summary_str,
+            overall_score=scores["overall"],
+            chat_history=chat_history_str
         )
         return {"status": "success", "message": f"Report for job {payload.job_id} saved successfully."}
     except Exception as e:
@@ -187,21 +264,32 @@ async def report_detail(request: Request, job_id: str):
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
         
-    scores = parse_summary_scores(report["summary"])
-    
-    # Convert markdown summary to HTML for display
+    report_card = None
     summary_html = ""
-    if report["summary"]:
-        # We can clean up the custom titles and divider lines if we want,
-        # but standard markdown parser will handle it nicely.
-        summary_html = markdown.markdown(report["summary"])
+    summary_raw = report.get("summary")
+    
+    if summary_raw:
+        if summary_raw.strip().startswith("{"):
+            try:
+                report_card = json.loads(summary_raw)
+            except Exception:
+                pass
         
+        if not report_card:
+            # Fallback to old markdown rendering
+            summary_html = markdown.markdown(summary_raw)
+            
+    scores = parse_summary_scores(report_card or summary_raw)
+    chat_history_list = clean_chat_history(report.get("chat_history"))
+    
     return templates.TemplateResponse(
         request=request,
         name="report_detail.html",
         context={
             "report": report,
             "scores": scores,
-            "summary_html": summary_html
+            "summary_html": summary_html,
+            "report_card": report_card,
+            "chat_history": chat_history_list
         }
     )

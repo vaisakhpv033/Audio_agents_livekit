@@ -2,7 +2,7 @@ import sqlite3
 import os
 from datetime import datetime, UTC
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "reports.db")
+DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "reports.db"))
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -22,9 +22,17 @@ def init_db():
             duration_seconds INTEGER,
             summary TEXT,
             overall_score INTEGER,
-            created_at TEXT
+            created_at TEXT,
+            chat_history TEXT
         )
     """)
+    
+    # Check if chat_history column exists (dynamic migration)
+    cursor.execute("PRAGMA table_info(reports)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "chat_history" not in columns:
+        cursor.execute("ALTER TABLE reports ADD COLUMN chat_history TEXT")
+        
     conn.commit()
     conn.close()
 
@@ -36,7 +44,8 @@ def save_report(
     ended_at: str,
     summary: str | None,
     overall_score: int | None,
-    duration_seconds: int | None = None
+    duration_seconds: int | None = None,
+    chat_history: str | None = None
 ) -> None:
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -69,8 +78,8 @@ def save_report(
     
     cursor.execute("""
         INSERT INTO reports (
-            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id) DO UPDATE SET
             room_id=excluded.room_id,
             room=excluded.room,
@@ -79,7 +88,8 @@ def save_report(
             duration_seconds=excluded.duration_seconds,
             summary=excluded.summary,
             overall_score=excluded.overall_score,
-            created_at=excluded.created_at
+            created_at=excluded.created_at,
+            chat_history=excluded.chat_history
     """, (
         job_id,
         room_id,
@@ -89,7 +99,8 @@ def save_report(
         duration_seconds,
         summary,
         overall_score,
-        now_iso
+        now_iso,
+        chat_history
     ))
     conn.commit()
     conn.close()

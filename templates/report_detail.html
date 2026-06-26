@@ -77,21 +77,36 @@
     <div class="score-breakdown-card">
         <h2>Criteria Evaluation Scorecard</h2>
         
-        {% set criteria_list = [
-            ('Rapport & Professionalism', scores.rapport, 'rapport'),
-            ('Discovery & Needs Analysis', scores.discovery, 'discovery'),
-            ('Product Knowledge', scores.product_knowledge, 'product_knowledge'),
-            ('Communication Skills', scores.communication, 'communication'),
-            ('Objection Handling', scores.objection_handling, 'objection_handling'),
-            ('Recommendation Quality', scores.recommendation_quality, 'recommendation_quality'),
-            ('Compliance & Ethical Conduct', scores.compliance, 'compliance'),
-            ('Closing Effectiveness', scores.closing, 'closing')
-        ] %}
+        {% if report_card %}
+            {% set criteria_list = [
+                ('Rapport & Professionalism', scores.rapport, report_card.rapport.reason),
+                ('Discovery & Needs Analysis', scores.discovery, report_card.discovery.reason),
+                ('Product Knowledge', scores.product_knowledge, report_card.product_knowledge.reason),
+                ('Communication Skills', scores.communication, report_card.communication.reason),
+                ('Objection Handling', scores.objection_handling, report_card.objection_handling.reason),
+                ('Recommendation Quality', scores.recommendation_quality, report_card.recommendation_quality.reason),
+                ('Compliance & Ethical Conduct', scores.compliance, report_card.compliance.reason),
+                ('Closing Effectiveness', scores.closing, report_card.closing.reason)
+            ] %}
+        {% else %}
+            {% set criteria_list = [
+                ('Rapport & Professionalism', scores.rapport, 'No detail available'),
+                ('Discovery & Needs Analysis', scores.discovery, 'No detail available'),
+                ('Product Knowledge', scores.product_knowledge, 'No detail available'),
+                ('Communication Skills', scores.communication, 'No detail available'),
+                ('Objection Handling', scores.objection_handling, 'No detail available'),
+                ('Recommendation Quality', scores.recommendation_quality, 'No detail available'),
+                ('Compliance & Ethical Conduct', scores.compliance, 'No detail available'),
+                ('Closing Effectiveness', scores.closing, 'No detail available')
+            ] %}
+        {% endif %}
         
-        {% for label, score, key in criteria_list %}
+        {% for label, score, reason in criteria_list %}
             <div class="score-bar-item">
                 <div class="score-bar-label">
-                    <span class="score-bar-name">{{ label }}</span>
+                    <span class="score-bar-name" {% if reason %}title="{{ reason }}" style="cursor: help;"{% endif %}>
+                        {{ label }} {% if reason and reason != 'No detail available' %}<i class="fa-solid fa-circle-info" style="font-size: 11px; margin-left: 4px; color: var(--text-muted);"></i>{% endif %}
+                    </span>
                     <span class="score-bar-val">{{ score }}/10</span>
                 </div>
                 {% set percentage = score * 10 %}
@@ -111,18 +126,167 @@
         {% endfor %}
     </div>
 
-    <!-- Summary Details Column -->
+    <!-- Summary & Transcript Tabbed Section Column -->
     <div class="summary-markdown-card">
-        <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-            <i class="fa-solid fa-list-check" style="margin-right: 8px; color: var(--color-primary);"></i> Call Evaluation Details
-        </h2>
-        <div class="summary-content">
-            {% if summary_html %}
-                {{ summary_html | safe }}
-            {% else %}
-                <p style="color: var(--text-muted); font-style: italic;">No evaluation summary details are available for this session.</p>
-            {% endif %}
+        <div class="tab-header">
+            <button class="tab-btn active" onclick="switchTab('evaluation')">
+                <i class="fa-solid fa-list-check" style="margin-right: 6px;"></i> Evaluation Rubric
+            </button>
+            <button class="tab-btn" onclick="switchTab('transcript')">
+                <i class="fa-solid fa-comments" style="margin-right: 6px;"></i> Call Transcript
+            </button>
+        </div>
+        
+        <!-- Tab Content 1: Evaluation Rubric -->
+        <div id="evaluation" class="tab-pane active">
+            <div class="summary-content">
+                {% if report_card %}
+                    <!-- Structured JSON Evaluation View -->
+                    <div class="structured-qa-card">
+                        <h3 style="margin-top: 0;"><i class="fa-solid fa-map"></i> Scenario Practiced</h3>
+                        <p>{{ report_card.scenario_practiced }}</p>
+                        
+                        <hr>
+                        
+                        <h3 style="color: var(--color-success);"><i class="fa-solid fa-circle-plus"></i> Strengths (What Went Well)</h3>
+                        <ul>
+                            {% for item in report_card.positives %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        
+                        <hr>
+                        
+                        <h3 style="color: var(--color-warning);"><i class="fa-solid fa-circle-minus"></i> Improvement Areas</h3>
+                        <ul>
+                            {% for item in report_card.improvement_areas %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        
+                        {% if report_card.missed_opportunities %}
+                            <hr>
+                            <h3><i class="fa-solid fa-circle-question"></i> Missed Opportunities</h3>
+                            <ul>
+                                {% for item in report_card.missed_opportunities %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <h3><i class="fa-solid fa-shield-halved"></i> Compliance Review</h3>
+                        {% if report_card.compliance_issues %}
+                            <ul style="border-left: 3px solid var(--color-danger); padding-left: 12px;">
+                                {% for item in report_card.compliance_issues %}
+                                    <li style="color: #fda4af;">{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p style="color: var(--color-success); font-weight: 500;">
+                                <i class="fa-solid fa-circle-check" style="margin-right: 4px;"></i> No compliance concerns identified.
+                            </p>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <h3 style="color: var(--color-primary);"><i class="fa-solid fa-graduation-cap"></i> Coaching Recommendations</h3>
+                        <ol>
+                            {% for item in report_card.coaching_recommendations %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ol>
+                        
+                        <hr>
+                        
+                        <h3><i class="fa-solid fa-heart-pulse"></i> Readiness Assessment reasoning</h3>
+                        <p style="font-style: italic; color: var(--text-secondary);">{{ report_card.readiness_reasoning }}</p>
+                    </div>
+                {% elif summary_html %}
+                    <!-- Old Markdown Fallback View -->
+                    {{ summary_html | safe }}
+                {% else %}
+                    <p style="color: var(--text-muted); font-style: italic;">No evaluation summary details are available for this session.</p>
+                {% endif %}
+        </div>
+    </div>
+        
+        <!-- Tab Content 2: Call Transcript -->
+        <div id="transcript" class="tab-pane">
+            <div class="transcript-container">
+                <div class="transcript-scroll-area">
+                    {% if chat_history %}
+                        {% for msg in chat_history %}
+                            {% set is_customer = (msg.role == 'assistant') %}
+                            <div class="chat-row {% if is_customer %}user{% else %}assistant{% endif %}">
+                                <div class="chat-avatar">
+                                    {% if is_customer %}RN{% else %}SR{% endif %}
+                                </div>
+                                <div class="chat-bubble">
+                                    <div class="chat-meta">
+                                        <span class="chat-sender-name">
+                                            {% if is_customer %}
+                                                Rahul Nair (Customer)
+                                            {% else %}
+                                                SBI Representative
+                                            {% endif %}
+                                        </span>
+                                        {% if msg.interrupted %}
+                                            <span class="badge-interrupted" title="Agent speech was interrupted by the user"><i class="fa-solid fa-hand"></i> Interrupted</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="chat-text">
+                                        {{ msg.text }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="padding: 60px 0;">
+                            <div class="empty-icon"><i class="fa-regular fa-comment-dots"></i></div>
+                            <h3>No Transcript Available</h3>
+                            <p style="margin-top: 8px;">The transcript log was not received for this session. Make sure your LiveKit agent is running the latest update.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+    function switchTab(tabId) {
+        // Toggle tab button active classes
+        const buttons = document.querySelectorAll('.tab-btn');
+        buttons.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(tabId)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Toggle tab pane active classes
+        const panes = document.querySelectorAll('.tab-pane');
+        panes.forEach(pane => {
+            if (pane.id === tabId) {
+                pane.classList.add('active');
+                
+                // If switching to transcript, auto-scroll to the bottom of the container
+                if (tabId === 'transcript') {
+                    const scrollArea = pane.querySelector('.transcript-scroll-area');
+                    if (scrollArea) {
+                        // wait slightly for render
+                        setTimeout(() => {
+                            scrollArea.scrollTop = scrollArea.scrollHeight;
+                        }, 50);
+                    }
+                }
+            } else {
+                pane.classList.remove('active');
+            }
+        });
+    }
+</script>
 {% endblock %}
