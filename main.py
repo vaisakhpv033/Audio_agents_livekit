@@ -14,7 +14,7 @@ from database import init_db, save_report, get_all_reports, get_report_by_job_id
 # Initialize Database on startup
 init_db()
 
-app = FastAPI(title="SBI Mutual Fund Voice Agent Report Portal")
+app = FastAPI(title="Ira.ai Voice Agent Report Portal")
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
