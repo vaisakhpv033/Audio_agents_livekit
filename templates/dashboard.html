@@ -137,9 +137,296 @@
     {% endif %}
 </div>
 
-<script
-  src="https://cloud.livekit.io/embed-popup.js"
-  data-lk-agent="CA_5iixpgAFZLCw"
-  data-lk-color="#002CF2"
-></script>
+<!-- Dynamic Agent Persona Configuration Trigger and Panel -->
+<button id="agent-config-trigger" class="config-floating-btn" title="Configure Agent Persona">
+    <i class="fa-solid fa-sliders"></i>
+</button>
+
+<div id="agent-config-panel" class="config-floating-panel hidden">
+    <div class="panel-header">
+        <h3>Agent Persona Settings</h3>
+        <button id="close-config-panel" class="close-btn">&times;</button>
+    </div>
+    <div class="panel-body">
+        <div class="form-group">
+            <label for="persona-select">Select Persona Archetype</label>
+            <select id="persona-select" class="form-control">
+                <option value="default">Default (Rahul - Polite Software Engineer)</option>
+                <option value="angry">Angry Customer (Rajesh - Bitter & Irritable)</option>
+                <option value="rude">Rude Corporate (Vikram - Hostile & Impatient)</option>
+                <option value="cool">Cool Freelancer (Rohan - Friendly & Casual)</option>
+                <option value="skeptical">Skeptical Clerk (Suresh - Cautious & Distrustful)</option>
+                <option value="confused">Confused Homemaker (Sunita - Anxious & Hesitant)</option>
+                <option value="demanding">Expert Analyst (Ananya - Analytical & Challenging)</option>
+                <option value="custom">Custom Persona...</option>
+            </select>
+        </div>
+        
+        <div id="custom-inputs" class="hidden">
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="custom-name">Name</label>
+                    <input type="text" id="custom-name" class="form-control" value="Rahul">
+                </div>
+                <div class="form-group half">
+                    <label for="custom-age">Age</label>
+                    <input type="number" id="custom-age" class="form-control" value="26">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="custom-occupation">Occupation</label>
+                    <input type="text" id="custom-occupation" class="form-control" value="Software Engineer">
+                </div>
+                <div class="form-group half">
+                    <label for="custom-location">Location</label>
+                    <input type="text" id="custom-location" class="form-control" value="Bengaluru">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="custom-instructions">Custom Scenario / Instructions</label>
+                <textarea id="custom-instructions" class="form-control" rows="4" placeholder="Enter custom background, goals, etc... (Absolute guardrails are automatically enforced)"></textarea>
+            </div>
+        </div>
+        
+        <button id="apply-config-btn" class="apply-btn">Apply & Rebuild Agent</button>
+    </div>
+</div>
+
+<style>
+.config-floating-btn {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: var(--transition-normal);
+    z-index: 9999;
+}
+.config-floating-btn:hover {
+    background-color: var(--bg-card-hover);
+    border-color: var(--color-primary);
+    transform: scale(1.05);
+    box-shadow: var(--shadow-glow);
+}
+.config-floating-panel {
+    position: fixed;
+    bottom: 156px;
+    right: 24px;
+    width: 340px;
+    max-height: 80vh;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: var(--transition-normal);
+}
+.config-floating-panel.hidden {
+    display: none;
+}
+.panel-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-card);
+}
+.panel-header h3 {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+}
+.panel-body {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.form-group label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: left;
+}
+.form-control {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    transition: var(--transition-fast);
+    outline: none;
+}
+.form-control:focus {
+    border-color: var(--color-primary);
+}
+.form-row {
+    display: flex;
+    gap: 12px;
+}
+.form-group.half {
+    flex: 1;
+}
+.apply-btn {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    margin-top: 8px;
+}
+.apply-btn:hover {
+    background-color: #5558e6;
+    box-shadow: var(--shadow-glow);
+}
+textarea.form-control {
+    resize: none;
+}
+.hidden {
+    display: none !important;
+}
+</style>
+
+<script>
+    // Configuration UI controls
+    const trigger = document.getElementById('agent-config-trigger');
+    const panel = document.getElementById('agent-config-panel');
+    const closeBtn = document.getElementById('close-config-panel');
+    const personaSelect = document.getElementById('persona-select');
+    const customInputs = document.getElementById('custom-inputs');
+    const applyBtn = document.getElementById('apply-config-btn');
+    
+    // Toggle settings panel
+    trigger.addEventListener('click', () => {
+        panel.classList.toggle('hidden');
+    });
+    
+    closeBtn.addEventListener('click', () => {
+        panel.classList.add('hidden');
+    });
+    
+    // Toggle custom fields visibility based on dropdown
+    personaSelect.addEventListener('change', () => {
+        if (personaSelect.value === 'custom') {
+            customInputs.classList.remove('hidden');
+        } else {
+            customInputs.classList.add('hidden');
+        }
+    });
+    
+    // Function to load the LiveKit Widget Script
+    function loadLiveKitAgent(personaData) {
+        // Remove existing scripts
+        const existingScripts = document.querySelectorAll('script[src*="embed-popup.js"]');
+        existingScripts.forEach(script => script.remove());
+        
+        // Remove existing widget elements
+        const widgetElements = document.querySelectorAll('[class*="lk-"], #lk-embed-widget, iframe[src*="livekit"]');
+        widgetElements.forEach(el => el.remove());
+        
+        // Create script element
+        const script = document.createElement('script');
+        script.src = "https://cloud.livekit.io/embed-popup.js";
+        script.setAttribute('data-lk-agent', 'CA_5iixpgAFZLCw');
+        script.setAttribute('data-lk-color', '#002CF2');
+        script.setAttribute('data-lk-job-metadata', JSON.stringify(personaData));
+        
+        document.body.appendChild(script);
+        console.log("Rebuilt LiveKit Agent Widget with metadata:", personaData);
+    }
+    
+    // Save configuration and rebuild widget
+    applyBtn.addEventListener('click', () => {
+        let personaData = {};
+        
+        const selectedValue = personaSelect.value;
+        if (selectedValue === 'custom') {
+            personaData = {
+                persona: "custom",
+                name: document.getElementById('custom-name').value,
+                age: parseInt(document.getElementById('custom-age').value) || 26,
+                occupation: document.getElementById('custom-occupation').value,
+                location: document.getElementById('custom-location').value,
+                custom_instructions: document.getElementById('custom-instructions').value
+            };
+        } else {
+            personaData = {
+                persona: selectedValue
+            };
+        }
+        
+        // Save to localStorage so it persists on reload
+        localStorage.setItem('lk_agent_persona', JSON.stringify(personaData));
+        
+        // Load the agent with new persona data
+        loadLiveKitAgent(personaData);
+        
+        // Close panel
+        panel.classList.add('hidden');
+    });
+    
+    // On Page Load: Retrieve and initialize the widget
+    window.addEventListener('DOMContentLoaded', () => {
+        let savedPersona = localStorage.getItem('lk_agent_persona');
+        let personaData = { persona: 'default' };
+        
+        if (savedPersona) {
+            try {
+                personaData = JSON.parse(savedPersona);
+                // Pre-fill the form values
+                personaSelect.value = personaData.persona;
+                if (personaData.persona === 'custom') {
+                    customInputs.classList.remove('hidden');
+                    document.getElementById('custom-name').value = personaData.name || '';
+                    document.getElementById('custom-age').value = personaData.age || 26;
+                    document.getElementById('custom-occupation').value = personaData.occupation || '';
+                    document.getElementById('custom-location').value = personaData.location || '';
+                    document.getElementById('custom-instructions').value = personaData.custom_instructions || '';
+                }
+            } catch(e) {
+                console.error("Failed to parse saved persona", e);
+            }
+        }
+        
+        // Initialize widget
+        loadLiveKitAgent(personaData);
+    });
+</script>
 {% endblock %}
