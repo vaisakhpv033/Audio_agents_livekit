@@ -1,0 +1,12 @@
+services:
+
+  report-server:
+    build: .
+    container_name: report-server
+    restart: always
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - DATABASE_PATH=/app/data/reports.db
+    volumes:
+      - ./data:/app/data
