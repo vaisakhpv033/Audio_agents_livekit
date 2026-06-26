@@ -267,6 +267,22 @@ async def dashboard(request: Request):
         avg_score = int(avg_score / total_calls)
     else:
         avg_score = 0
+
+    # Retrieve agent persona from cookie
+    import urllib.parse
+    import html
+    persona_cookie = request.cookies.get("lk_agent_persona")
+    persona_json = '{"persona": "default"}'
+    if persona_cookie:
+        try:
+            decoded_cookie = urllib.parse.unquote(persona_cookie)
+            # Verify it's valid JSON
+            json.loads(decoded_cookie)
+            persona_json = decoded_cookie
+        except Exception:
+            pass
+            
+    lk_agent_persona_json_escaped = html.escape(persona_json)
         
     return templates.TemplateResponse(
         request=request,
@@ -277,7 +293,8 @@ async def dashboard(request: Request):
                 "total_calls": total_calls,
                 "avg_score": avg_score,
                 "readiness": readiness_counts
-            }
+            },
+            "lk_agent_persona_json": lk_agent_persona_json_escaped
         }
     )
 

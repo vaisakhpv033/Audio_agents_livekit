@@ -324,6 +324,13 @@ textarea.form-control {
 }
 </style>
 
+<script 
+  src="https://cloud.livekit.io/embed-popup.js" 
+  data-lk-agent="CA_5iixpgAFZLCw" 
+  data-lk-color="#002CF2"
+  data-lk-job-metadata='{{ lk_agent_persona_json | safe }}'
+></script>
+
 <script>
     // Configuration UI controls
     const trigger = document.getElementById('agent-config-trigger');
@@ -351,27 +358,6 @@ textarea.form-control {
         }
     });
     
-    // Function to load the LiveKit Widget Script
-    function loadLiveKitAgent(personaData) {
-        // Remove existing scripts
-        const existingScripts = document.querySelectorAll('script[src*="embed-popup.js"]');
-        existingScripts.forEach(script => script.remove());
-        
-        // Remove existing widget elements
-        const widgetElements = document.querySelectorAll('[class*="lk-"], #lk-embed-widget, iframe[src*="livekit"]');
-        widgetElements.forEach(el => el.remove());
-        
-        // Create script element
-        const script = document.createElement('script');
-        script.src = "https://cloud.livekit.io/embed-popup.js";
-        script.setAttribute('data-lk-agent', 'CA_5iixpgAFZLCw');
-        script.setAttribute('data-lk-color', '#002CF2');
-        script.setAttribute('data-lk-job-metadata', JSON.stringify(personaData));
-        
-        document.body.appendChild(script);
-        console.log("Rebuilt LiveKit Agent Widget with metadata:", personaData);
-    }
-    
     // Save configuration and rebuild widget
     applyBtn.addEventListener('click', () => {
         let personaData = {};
@@ -392,17 +378,20 @@ textarea.form-control {
             };
         }
         
-        // Save to localStorage so it persists on reload
+        // Save to localStorage so it persists on reload for form fields pre-fill
         localStorage.setItem('lk_agent_persona', JSON.stringify(personaData));
         
-        // Load the agent with new persona data
-        loadLiveKitAgent(personaData);
+        // Save to cookie so the backend can read and render it in the static script tag
+        document.cookie = "lk_agent_persona=" + encodeURIComponent(JSON.stringify(personaData)) + "; path=/; max-age=31536000";
         
         // Close panel
         panel.classList.add('hidden');
+        
+        // Reload the page to inject the new script tag synchronously
+        location.reload();
     });
     
-    // On Page Load: Retrieve and initialize the widget
+    // On Page Load: Retrieve and pre-fill form values
     window.addEventListener('DOMContentLoaded', () => {
         let savedPersona = localStorage.getItem('lk_agent_persona');
         let personaData = { persona: 'default' };
@@ -424,9 +413,6 @@ textarea.form-control {
                 console.error("Failed to parse saved persona", e);
             }
         }
-        
-        // Initialize widget
-        loadLiveKitAgent(personaData);
     });
 </script>
 {% endblock %}
