@@ -77,29 +77,45 @@
                             <td>{{ format_datetime(r.started_at) }}</td>
                             <td>{{ format_duration(r.duration_seconds) }}</td>
                             <td>
-                                {% set s = r.overall_score %}
-                                {% if s >= 80 %}
-                                    <span class="score-badge high">{{ s }}/100</span>
-                                {% elif s >= 50 %}
-                                    <span class="score-badge medium">{{ s }}/100</span>
+                                {% if r.status == 'ongoing' %}
+                                    <span class="score-badge medium" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning); border-color: rgba(245, 158, 11, 0.3);">
+                                        <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 4px;"></i> Ongoing
+                                    </span>
+                                {% elif r.status == 'failed' %}
+                                    <span class="score-badge low" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger); border-color: rgba(239, 68, 68, 0.3);">
+                                        <i class="fa-solid fa-triangle-exclamation" style="margin-right: 4px;"></i> Failed
+                                    </span>
                                 {% else %}
-                                    <span class="score-badge low">{{ s }}/100</span>
+                                    {% set s = r.overall_score %}
+                                    {% if s >= 80 %}
+                                        <span class="score-badge high">{{ s }}/100</span>
+                                    {% elif s >= 50 %}
+                                        <span class="score-badge medium">{{ s }}/100</span>
+                                    {% else %}
+                                        <span class="score-badge low">{{ s }}/100</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td>
-                                {% set status = r.scores.readiness %}
-                                {% if status == 'Production Ready' %}
-                                    <span class="readiness-badge ready"><i class="fa-solid fa-circle-check"></i> Production Ready</span>
-                                {% elif status == 'Ready With Supervision' %}
-                                    <span class="readiness-badge supervision"><i class="fa-solid fa-user-shield"></i> Ready (Supervised)</span>
-                                {% elif status == 'Developing' %}
-                                    <span class="readiness-badge developing"><i class="fa-solid fa-person-digging"></i> Developing</span>
-                                {% elif status == 'Needs Significant Coaching' %}
-                                    <span class="readiness-badge coaching"><i class="fa-solid fa-triangle-exclamation"></i> Needs Coaching</span>
-                                {% elif status == 'Not Ready' %}
-                                    <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Not Ready</span>
+                                {% if r.status == 'ongoing' %}
+                                    <span class="readiness-badge developing"><i class="fa-solid fa-arrows-spin fa-spin"></i> Ongoing...</span>
+                                {% elif r.status == 'failed' %}
+                                    <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
                                 {% else %}
-                                    <span class="readiness-badge developing">{{ status }}</span>
+                                    {% set status = r.scores.readiness %}
+                                    {% if status == 'Production Ready' %}
+                                        <span class="readiness-badge ready"><i class="fa-solid fa-circle-check"></i> Production Ready</span>
+                                    {% elif status == 'Ready With Supervision' %}
+                                        <span class="readiness-badge supervision"><i class="fa-solid fa-user-shield"></i> Ready (Supervised)</span>
+                                    {% elif status == 'Developing' %}
+                                        <span class="readiness-badge developing"><i class="fa-solid fa-person-digging"></i> Developing</span>
+                                    {% elif status == 'Needs Significant Coaching' %}
+                                        <span class="readiness-badge coaching"><i class="fa-solid fa-triangle-exclamation"></i> Needs Coaching</span>
+                                    {% elif status == 'Not Ready' %}
+                                        <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Not Ready</span>
+                                    {% else %}
+                                        <span class="readiness-badge developing">{{ status }}</span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td>

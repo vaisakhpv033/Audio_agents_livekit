@@ -23,15 +23,18 @@ def init_db():
             summary TEXT,
             overall_score INTEGER,
             created_at TEXT,
-            chat_history TEXT
+            chat_history TEXT,
+            status TEXT DEFAULT 'completed'
         )
     """)
     
-    # Check if chat_history column exists (dynamic migration)
+    # Check if chat_history and status columns exist (dynamic migration)
     cursor.execute("PRAGMA table_info(reports)")
     columns = [row[1] for row in cursor.fetchall()]
     if "chat_history" not in columns:
         cursor.execute("ALTER TABLE reports ADD COLUMN chat_history TEXT")
+    if "status" not in columns:
+        cursor.execute("ALTER TABLE reports ADD COLUMN status TEXT DEFAULT 'completed'")
         
     conn.commit()
     conn.close()
@@ -45,7 +48,8 @@ def save_report(
     summary: str | None,
     overall_score: int | None,
     duration_seconds: int | None = None,
-    chat_history: str | None = None
+    chat_history: str | None = None,
+    status: str = "ongoing"
 ) -> None:
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -78,8 +82,8 @@ def save_report(
     
     cursor.execute("""
         INSERT INTO reports (
-            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id) DO UPDATE SET
             room_id=excluded.room_id,
             room=excluded.room,
@@ -89,7 +93,8 @@ def save_report(
             summary=excluded.summary,
             overall_score=excluded.overall_score,
             created_at=excluded.created_at,
-            chat_history=excluded.chat_history
+            chat_history=excluded.chat_history,
+            status=excluded.status
     """, (
         job_id,
         room_id,
@@ -100,8 +105,25 @@ def save_report(
         summary,
         overall_score,
         now_iso,
-        chat_history
+        chat_history,
+        status
     ))
+    conn.commit()
+    conn.close()
+
+def update_report_summary(
+    job_id: str,
+    summary: str | None,
+    overall_score: int | None,
+    status: str
+) -> None:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE reports
+        SET summary = ?, overall_score = ?, status = ?
+        WHERE job_id = ?
+    """, (summary, overall_score, status, job_id))
     conn.commit()
     conn.close()
 

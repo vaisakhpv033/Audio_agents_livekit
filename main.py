@@ -2,14 +2,20 @@ import os
 import re
 import json
 from datetime import datetime
-from fastapi import FastAPI, Request, HTTPException
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
 import markdown
 
-from database import init_db, save_report, get_all_reports, get_report_by_job_id
+from database import init_db, save_report, get_all_reports, get_report_by_job_id, update_report_summary
+from schemas import ReportPayload
+from services.gemini import evaluate_chat_history
 
 # Initialize Database on startup
 init_db()
@@ -23,15 +29,6 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 # Mount Static Files
 os.makedirs(os.path.join(BASE_DIR, "static", "css"), exist_ok=True)
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
-
-class ReportPayload(BaseModel):
-    job_id: str
-    room_id: str
-    room: str
-    started_at: str | None = None
-    ended_at: str
-    summary: dict | str | None = None
-    chat_history: dict | None = None
 
 def parse_summary_scores(summary_data: dict | str | None) -> dict:
     if not summary_data:
@@ -184,19 +181,22 @@ def format_duration(seconds: int | None) -> str:
 # Register helper functions
 templates.env.globals.update(format_datetime=format_datetime, format_duration=format_duration)
 
-@app.post("/api/reports")
-async def receive_report(payload: ReportPayload):
+# Helper to evaluate and summarize in background
+async def evaluate_and_summarize(job_id: str, chat_history_str: str | None) -> None:
     try:
-        # Parse scores to store the overall score in DB
-        scores = parse_summary_scores(payload.summary)
-        
-        summary_str = None
-        if payload.summary:
-            if isinstance(payload.summary, dict):
-                summary_str = json.dumps(payload.summary)
-            else:
-                summary_str = payload.summary
-                
+        report_card, overall_score = await evaluate_chat_history(chat_history_str)
+        if report_card:
+            summary_json_str = json.dumps(report_card)
+            update_report_summary(job_id, summary_json_str, overall_score, "completed")
+        else:
+            update_report_summary(job_id, None, 0, "failed")
+    except Exception as e:
+        print(f"Error in background evaluation: {e}")
+        update_report_summary(job_id, None, 0, "failed")
+
+@app.post("/api/reports")
+async def receive_report(payload: ReportPayload, background_tasks: BackgroundTasks):
+    try:
         chat_history_str = None
         if payload.chat_history:
             chat_history_str = json.dumps(payload.chat_history)
@@ -207,20 +207,42 @@ async def receive_report(payload: ReportPayload):
             room=payload.room,
             started_at=payload.started_at,
             ended_at=payload.ended_at,
-            summary=summary_str,
-            overall_score=scores["overall"],
-            chat_history=chat_history_str
+            summary=None,
+            overall_score=0,
+            chat_history=chat_history_str,
+            status="ongoing"
         )
-        return {"status": "success", "message": f"Report for job {payload.job_id} saved successfully."}
+        
+        # Start background evaluation task
+        background_tasks.add_task(evaluate_and_summarize, payload.job_id, chat_history_str)
+        return {"status": "success", "message": f"Report for job {payload.job_id} received. Evaluation started in background."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/reports/{job_id}/status")
+async def get_report_status(job_id: str):
+    report = get_report_by_job_id(job_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"status": report.get("status", "completed")}
+
+@app.post("/api/reports/{job_id}/retry")
+async def retry_report_evaluation(job_id: str, background_tasks: BackgroundTasks):
+    report = get_report_by_job_id(job_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    update_report_summary(job_id, None, 0, "ongoing")
+    background_tasks.add_task(evaluate_and_summarize, job_id, report.get("chat_history"))
+    return {"status": "success", "message": f"Retry evaluation started for job {job_id}."}
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     reports = get_all_reports()
     
-    # Calculate stats
-    total_calls = len(reports)
+    # Calculate stats using completed evaluations only
+    completed_reports = [r for r in reports if r.get("status") == "completed"]
+    total_calls = len(completed_reports)
     avg_score = 0
     readiness_counts = {
         "Production Ready": 0,
@@ -234,11 +256,12 @@ async def dashboard(request: Request):
         # parse each report's score details
         scores = parse_summary_scores(r["summary"])
         r["scores"] = scores
-        avg_score += r["overall_score"]
         
-        r_type = scores["readiness"]
-        if r_type in readiness_counts:
-            readiness_counts[r_type] += 1
+        if r.get("status") == "completed":
+            avg_score += r["overall_score"]
+            r_type = scores["readiness"]
+            if r_type in readiness_counts:
+                readiness_counts[r_type] += 1
             
     if total_calls > 0:
         avg_score = int(avg_score / total_calls)
