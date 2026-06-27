@@ -16,7 +16,7 @@
         </div>
         <div class="kpi-info">
             <h3>Total Calls Evaluated</h3>
-            <div class="kpi-value">{{ stats.total_calls }}</div>
+            <div class="kpi-value" id="stat-total-calls">{{ stats.total_calls }}</div>
         </div>
     </div>
     
@@ -26,7 +26,7 @@
         </div>
         <div class="kpi-info">
             <h3>Average QA Score</h3>
-            <div class="kpi-value">{{ stats.avg_score }}/100</div>
+            <div class="kpi-value" id="stat-avg-score">{{ stats.avg_score }}/100</div>
         </div>
     </div>
     
@@ -36,7 +36,7 @@
         </div>
         <div class="kpi-info">
             <h3>Production Ready</h3>
-            <div class="kpi-value">
+            <div class="kpi-value" id="stat-ready-percentage">
                 {% set ready_count = stats.readiness.get('Production Ready', 0) + stats.readiness.get('Ready With Supervision', 0) %}
                 {% if stats.total_calls > 0 %}
                     {{ ((ready_count / stats.total_calls) * 100) | int }}%
@@ -52,89 +52,91 @@
 <div class="section-card">
     <div class="section-header">
         <h2>Session Evaluations</h2>
-        <span class="logo-badge">{{ reports|length }} Records</span>
+        <span class="logo-badge" id="records-count">{{ reports|length }} Records</span>
     </div>
     
-    {% if reports %}
-        <div class="table-responsive">
-            <table class="reports-table">
-                <thead>
-                    <tr>
-                        <th>Job ID</th>
-                        <th>Room</th>
-                        <th>Call Date</th>
-                        <th>Duration</th>
-                        <th>QA Score</th>
-                        <th>Readiness Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in reports %}
+    <div id="reports-container">
+        {% if reports %}
+            <div class="table-responsive">
+                <table class="reports-table">
+                    <thead>
                         <tr>
-                            <td class="col-job" title="{{ r.job_id }}">{{ r.job_id[:12] }}...</td>
-                            <td class="col-room"><i class="fa-regular fa-comments text-secondary" style="margin-right: 6px;"></i> {{ r.room }}</td>
-                            <td class="local-datetime" data-utc="{{ r.started_at }}">{{ format_datetime(r.started_at) }}</td>
-                            <td>{{ format_duration(r.duration_seconds) }}</td>
-                            <td>
-                                {% if r.status == 'ongoing' %}
-                                    <span class="score-badge medium" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning); border-color: rgba(245, 158, 11, 0.3);">
-                                        <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 4px;"></i> Ongoing
-                                    </span>
-                                {% elif r.status == 'failed' %}
-                                    <span class="score-badge low" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger); border-color: rgba(239, 68, 68, 0.3);">
-                                        <i class="fa-solid fa-triangle-exclamation" style="margin-right: 4px;"></i> Failed
-                                    </span>
-                                {% else %}
-                                    {% set s = r.overall_score %}
-                                    {% if s >= 80 %}
-                                        <span class="score-badge high">{{ s }}/100</span>
-                                    {% elif s >= 50 %}
-                                        <span class="score-badge medium">{{ s }}/100</span>
-                                    {% else %}
-                                        <span class="score-badge low">{{ s }}/100</span>
-                                    {% endif %}
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if r.status == 'ongoing' %}
-                                    <span class="readiness-badge developing"><i class="fa-solid fa-arrows-spin fa-spin"></i> Ongoing...</span>
-                                {% elif r.status == 'failed' %}
-                                    <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
-                                {% else %}
-                                    {% set status = r.scores.readiness %}
-                                    {% if status == 'Production Ready' %}
-                                        <span class="readiness-badge ready"><i class="fa-solid fa-circle-check"></i> Production Ready</span>
-                                    {% elif status == 'Ready With Supervision' %}
-                                        <span class="readiness-badge supervision"><i class="fa-solid fa-user-shield"></i> Ready (Supervised)</span>
-                                    {% elif status == 'Developing' %}
-                                        <span class="readiness-badge developing"><i class="fa-solid fa-person-digging"></i> Developing</span>
-                                    {% elif status == 'Needs Significant Coaching' %}
-                                        <span class="readiness-badge coaching"><i class="fa-solid fa-triangle-exclamation"></i> Needs Coaching</span>
-                                    {% elif status == 'Not Ready' %}
-                                        <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Not Ready</span>
-                                    {% else %}
-                                        <span class="readiness-badge developing">{{ status }}</span>
-                                    {% endif %}
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="/reports/{{ r.job_id }}" class="action-btn">
-                                    <i class="fa-regular fa-folder-open"></i> View Card
-                                </a>
-                            </td>
+                            <th>Job ID</th>
+                            <th>Room</th>
+                            <th>Call Date</th>
+                            <th>Duration</th>
+                            <th>QA Score</th>
+                            <th>Readiness Status</th>
+                            <th>Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="empty-state">
-            <div class="empty-icon"><i class="fa-solid fa-microphone-slash"></i></div>
-            <h3>No Evaluations Found</h3>
-            <p style="margin-top: 8px;">Run your LiveKit agent to process and generate calls. Once a call ends, the session summary will appear here automatically.</p>
-        </div>
-    {% endif %}
+                    </thead>
+                    <tbody>
+                        {% for r in reports %}
+                            <tr>
+                                <td class="col-job" title="{{ r.job_id }}">{{ r.job_id[:12] }}...</td>
+                                <td class="col-room"><i class="fa-regular fa-comments text-secondary" style="margin-right: 6px;"></i> {{ r.room }}</td>
+                                <td class="local-datetime" data-utc="{{ r.started_at }}">{{ format_datetime(r.started_at) }}</td>
+                                <td>{{ format_duration(r.duration_seconds) }}</td>
+                                <td>
+                                    {% if r.status == 'ongoing' %}
+                                        <span class="score-badge medium" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning); border-color: rgba(245, 158, 11, 0.3);">
+                                            <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 4px;"></i> Ongoing
+                                        </span>
+                                    {% elif r.status == 'failed' %}
+                                        <span class="score-badge low" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger); border-color: rgba(239, 68, 68, 0.3);">
+                                            <i class="fa-solid fa-triangle-exclamation" style="margin-right: 4px;"></i> Failed
+                                        </span>
+                                    {% else %}
+                                        {% set s = r.overall_score %}
+                                        {% if s >= 80 %}
+                                            <span class="score-badge high">{{ s }}/100</span>
+                                        {% elif s >= 50 %}
+                                            <span class="score-badge medium">{{ s }}/100</span>
+                                        {% else %}
+                                            <span class="score-badge low">{{ s }}/100</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.status == 'ongoing' %}
+                                        <span class="readiness-badge developing"><i class="fa-solid fa-arrows-spin fa-spin"></i> Ongoing...</span>
+                                    {% elif r.status == 'failed' %}
+                                        <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
+                                    {% else %}
+                                        {% set status = r.scores.readiness %}
+                                        {% if status == 'Production Ready' %}
+                                            <span class="readiness-badge ready"><i class="fa-solid fa-circle-check"></i> Production Ready</span>
+                                        {% elif status == 'Ready With Supervision' %}
+                                            <span class="readiness-badge supervision"><i class="fa-solid fa-user-shield"></i> Ready (Supervised)</span>
+                                        {% elif status == 'Developing' %}
+                                            <span class="readiness-badge developing"><i class="fa-solid fa-person-digging"></i> Developing</span>
+                                        {% elif status == 'Needs Significant Coaching' %}
+                                            <span class="readiness-badge coaching"><i class="fa-solid fa-triangle-exclamation"></i> Needs Coaching</span>
+                                        {% elif status == 'Not Ready' %}
+                                            <span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Not Ready</span>
+                                        {% else %}
+                                            <span class="readiness-badge developing">{{ status }}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="/reports/{{ r.job_id }}" class="action-btn">
+                                        <i class="fa-regular fa-folder-open"></i> View Card
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fa-solid fa-microphone-slash"></i></div>
+                <h3>No Evaluations Found</h3>
+                <p style="margin-top: 8px;">Run your LiveKit agent to process and generate calls. Once a call ends, the session summary will appear here automatically.</p>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Dynamic Agent Persona Configuration Trigger and Panel -->
@@ -414,5 +416,168 @@ textarea.form-control {
             }
         }
     });
-</script>
+
+    window.addEventListener('DOMContentLoaded', () => {
+        // Polling logic for live reports updates
+        const reportsContainer = document.getElementById('reports-container');
+    const recordsCount = document.getElementById('records-count');
+    const statTotalCalls = document.getElementById('stat-total-calls');
+    const statAvgScore = document.getElementById('stat-avg-score');
+    const statReadyPercentage = document.getElementById('stat-ready-percentage');
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    async function pollReports() {
+        try {
+            const response = await fetch('/api/reports');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            // Update stats
+            if (statTotalCalls) statTotalCalls.textContent = data.stats.total_calls;
+            if (statAvgScore) statAvgScore.textContent = `${data.stats.avg_score}/100`;
+            
+            if (statReadyPercentage) {
+                const readyCount = (data.stats.readiness['Production Ready'] || 0) + (data.stats.readiness['Ready With Supervision'] || 0);
+                const total = data.stats.total_calls;
+                const percentage = total > 0 ? Math.floor((readyCount / total) * 100) : 0;
+                statReadyPercentage.textContent = `${percentage}%`;
+            }
+            
+            if (recordsCount) {
+                recordsCount.textContent = `${data.reports.length} Records`;
+            }
+
+            // Update reports table / empty state
+            if (data.reports.length > 0) {
+                let tableHtml = `
+                    <div class="table-responsive">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Job ID</th>
+                                    <th>Room</th>
+                                    <th>Call Date</th>
+                                    <th>Duration</th>
+                                    <th>QA Score</th>
+                                    <th>Readiness Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.reports.forEach(r => {
+                    // QA Score Badge
+                    let scoreBadge = '';
+                    if (r.status === 'ongoing') {
+                        scoreBadge = `
+                            <span class="score-badge medium" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning); border-color: rgba(245, 158, 11, 0.3);">
+                                <i class="fa-solid fa-circle-notch fa-spin" style="margin-right: 4px;"></i> Ongoing
+                            </span>
+                        `;
+                    } else if (r.status === 'failed') {
+                        scoreBadge = `
+                            <span class="score-badge low" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger); border-color: rgba(239, 68, 68, 0.3);">
+                                <i class="fa-solid fa-triangle-exclamation" style="margin-right: 4px;"></i> Failed
+                            </span>
+                        `;
+                    } else {
+                        const s = r.overall_score;
+                        if (s >= 80) {
+                            scoreBadge = `<span class="score-badge high">${s}/100</span>`;
+                        } else if (s >= 50) {
+                            scoreBadge = `<span class="score-badge medium">${s}/100</span>`;
+                        } else {
+                            scoreBadge = `<span class="score-badge low">${s}/100</span>`;
+                        }
+                    }
+
+                    // Readiness Status Badge
+                    let readinessBadge = '';
+                    if (r.status === 'ongoing') {
+                        readinessBadge = `<span class="readiness-badge developing"><i class="fa-solid fa-arrows-spin fa-spin"></i> Ongoing...</span>`;
+                    } else if (r.status === 'failed') {
+                        readinessBadge = `<span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Failed</span>`;
+                    } else {
+                        const status = r.scores ? r.scores.readiness : 'N/A';
+                        if (status === 'Production Ready') {
+                            readinessBadge = `<span class="readiness-badge ready"><i class="fa-solid fa-circle-check"></i> Production Ready</span>`;
+                        } else if (status === 'Ready With Supervision') {
+                            readinessBadge = `<span class="readiness-badge supervision"><i class="fa-solid fa-user-shield"></i> Ready (Supervised)</span>`;
+                        } else if (status === 'Developing') {
+                            readinessBadge = `<span class="readiness-badge developing"><i class="fa-solid fa-person-digging"></i> Developing</span>`;
+                        } else if (status === 'Needs Significant Coaching') {
+                            readinessBadge = `<span class="readiness-badge coaching"><i class="fa-solid fa-triangle-exclamation"></i> Needs Coaching</span>`;
+                        } else if (status === 'Not Ready') {
+                            readinessBadge = `<span class="readiness-badge notready"><i class="fa-solid fa-circle-xmark"></i> Not Ready</span>`;
+                        } else {
+                            readinessBadge = `<span class="readiness-badge developing">${escapeHtml(status)}</span>`;
+                        }
+                    }
+
+                    const formatDurationJS = (seconds) => {
+                        if (seconds === null || seconds === undefined || seconds === 0) {
+                            return "Unknown";
+                        }
+                        const minutes = Math.floor(seconds / 60);
+                        const secs = seconds % 60;
+                        if (minutes > 0) {
+                            return `${minutes}m ${secs}s`;
+                        }
+                        return `${secs}s`;
+                    };
+
+                    const shortJobId = r.job_id.substring(0, 12);
+                    const formattedTime = window.formatLocalTime ? window.formatLocalTime(r.started_at) : (r.started_at || 'N/A');
+
+                    tableHtml += `
+                        <tr>
+                            <td class="col-job" title="${escapeHtml(r.job_id)}">${escapeHtml(shortJobId)}...</td>
+                            <td class="col-room"><i class="fa-regular fa-comments text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.room)}</td>
+                            <td class="local-datetime" data-utc="${escapeHtml(r.started_at || '')}">${formattedTime}</td>
+                            <td>${formatDurationJS(r.duration_seconds)}</td>
+                            <td>${scoreBadge}</td>
+                            <td>${readinessBadge}</td>
+                            <td>
+                                <a href="/reports/${escapeHtml(r.job_id)}" class="action-btn">
+                                    <i class="fa-regular fa-folder-open"></i> View Card
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                reportsContainer.innerHTML = tableHtml;
+            } else {
+                reportsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fa-solid fa-microphone-slash"></i></div>
+                        <h3>No Evaluations Found</h3>
+                        <p style="margin-top: 8px;">Run your LiveKit agent to process and generate calls. Once a call ends, the session summary will appear here automatically.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error polling reports:', error);
+        }
+    }
+
+    // Poll every 10 seconds
+    setInterval(pollReports, 10000);
+});
 {% endblock %}

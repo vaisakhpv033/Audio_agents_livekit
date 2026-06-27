@@ -241,6 +241,59 @@ async def retry_report_evaluation(job_id: str, background_tasks: BackgroundTasks
     background_tasks.add_task(evaluate_and_summarize, job_id, report.get("chat_history"))
     return {"status": "success", "message": f"Retry evaluation started for job {job_id}."}
 
+@app.get("/api/reports")
+async def get_reports_api():
+    try:
+        reports = get_all_reports()
+        
+        # Calculate stats using completed evaluations only
+        completed_reports = [r for r in reports if r.get("status") == "completed"]
+        total_calls = len(completed_reports)
+        avg_score = 0
+        readiness_counts = {
+            "Production Ready": 0,
+            "Ready With Supervision": 0,
+            "Developing": 0,
+            "Needs Significant Coaching": 0,
+            "Not Ready": 0
+        }
+        
+        cleaned_reports = []
+        for r in reports:
+            scores = parse_summary_scores(r.get("summary"))
+            if r.get("status") == "completed":
+                avg_score += r.get("overall_score", 0)
+                r_type = scores.get("readiness")
+                if r_type in readiness_counts:
+                    readiness_counts[r_type] += 1
+            
+            cleaned_reports.append({
+                "job_id": r.get("job_id"),
+                "room": r.get("room"),
+                "started_at": r.get("started_at"),
+                "ended_at": r.get("ended_at"),
+                "duration_seconds": r.get("duration_seconds"),
+                "overall_score": r.get("overall_score"),
+                "status": r.get("status"),
+                "scores": scores
+            })
+            
+        if total_calls > 0:
+            avg_score = int(avg_score / total_calls)
+        else:
+            avg_score = 0
+            
+        return {
+            "reports": cleaned_reports,
+            "stats": {
+                "total_calls": total_calls,
+                "avg_score": avg_score,
+                "readiness": readiness_counts
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     reports = get_all_reports()

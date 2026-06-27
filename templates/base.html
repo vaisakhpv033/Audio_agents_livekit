@@ -48,7 +48,7 @@
     </footer>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const formatLocalTime = (utcStr) => {
+            window.formatLocalTime = (utcStr) => {
                 if (!utcStr || utcStr === 'None' || utcStr === 'N/A') return 'N/A';
                 try {
                     // Normalize to ensure UTC parsing
@@ -77,7 +77,7 @@
             document.querySelectorAll('.local-datetime').forEach(el => {
                 const utcStr = el.getAttribute('data-utc');
                 if (utcStr) {
-                    el.textContent = formatLocalTime(utcStr);
+                    el.textContent = window.formatLocalTime(utcStr);
                 }
             });
         });
