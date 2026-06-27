@@ -417,7 +417,7 @@ textarea.form-control {
         }
     });
 
-    window.addEventListener('DOMContentLoaded', () => {
+    const initReportsPolling = () => {
         // Polling logic for live reports updates
         const reportsContainer = document.getElementById('reports-container');
     const recordsCount = document.getElementById('records-count');
@@ -579,5 +579,11 @@ textarea.form-control {
 
     // Poll every 10 seconds
     setInterval(pollReports, 10000);
-});
+};
+
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initReportsPolling);
+} else {
+    initReportsPolling();
+}
 {% endblock %}

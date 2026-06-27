@@ -47,40 +47,47 @@
         </div>
     </footer>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.formatLocalTime = (utcStr) => {
-                if (!utcStr || utcStr === 'None' || utcStr === 'N/A') return 'N/A';
-                try {
-                    // Normalize to ensure UTC parsing
-                    let formattedStr = utcStr;
-                    if (!utcStr.endsWith('Z') && !utcStr.includes('+') && !/[-+]\d{2}:?\d{2}$/.test(utcStr)) {
-                        formattedStr = utcStr + 'Z';
-                    }
-                    const date = new Date(formattedStr);
-                    if (isNaN(date.getTime())) return utcStr;
-                    
-                    const options = {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    };
-                    return new Intl.DateTimeFormat(navigator.language || 'en-US', options).format(date);
-                } catch (e) {
-                    console.error("Error formatting local time:", e);
-                    return utcStr;
+        // Define formatLocalTime globally immediately
+        window.formatLocalTime = (utcStr) => {
+            if (!utcStr || utcStr === 'None' || utcStr === 'N/A') return 'N/A';
+            try {
+                // Normalize to ensure UTC parsing
+                let formattedStr = utcStr;
+                if (!utcStr.endsWith('Z') && !utcStr.includes('+') && !/[-+]\d{2}:?\d{2}$/.test(utcStr)) {
+                    formattedStr = utcStr + 'Z';
                 }
-            };
+                const date = new Date(formattedStr);
+                if (isNaN(date.getTime())) return utcStr;
+                
+                const options = {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                };
+                return new Intl.DateTimeFormat(navigator.language || 'en-US', options).format(date);
+            } catch (e) {
+                console.error("Error formatting local time:", e);
+                return utcStr;
+            }
+        };
 
+        const formatAllElements = () => {
             document.querySelectorAll('.local-datetime').forEach(el => {
                 const utcStr = el.getAttribute('data-utc');
                 if (utcStr) {
                     el.textContent = window.formatLocalTime(utcStr);
                 }
             });
-        });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', formatAllElements);
+        } else {
+            formatAllElements();
+        }
     </script>
 </body>
 </html>
