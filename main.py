@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -156,15 +156,20 @@ def clean_chat_history(chat_history_str: str | None) -> list:
         print("Error parsing chat history:", e)
         return []
 
-# Helper Jinja filter/function to format ISO datetimes
+# Helper Jinja filter/function to format ISO datetimes to IST (UTC+5:30)
 def format_datetime(iso_str: str | None) -> str:
     if not iso_str:
         return "N/A"
     try:
-        # e.g. "2026-06-25T14:41:21.123Z" -> "June 25, 2026 14:41:21"
-        clean_str = iso_str.rstrip("Z").split(".")[0]
-        dt = datetime.fromisoformat(clean_str)
-        return dt.strftime("%b %d, %Y %I:%M %p")
+        # Normalize timezone suffix Z to +00:00
+        dt_str = iso_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(dt_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Convert to IST (UTC+5:30)
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
+        dt_ist = dt.astimezone(ist_tz)
+        return dt_ist.strftime("%b %d, %Y %I:%M %p")
     except Exception:
         return iso_str
 

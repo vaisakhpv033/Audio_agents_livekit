@@ -18,11 +18,11 @@
         <div class="meta-grid">
             <div class="meta-item">
                 <span class="meta-label">Started At</span>
-                <span class="meta-value"><i class="fa-regular fa-clock text-secondary" style="margin-right: 6px;"></i> {{ format_datetime(report.started_at) }}</span>
+                <span class="meta-value"><i class="fa-regular fa-clock text-secondary" style="margin-right: 6px;"></i> <span class="local-datetime" data-utc="{{ report.started_at }}">{{ format_datetime(report.started_at) }}</span></span>
             </div>
             <div class="meta-item">
                 <span class="meta-label">Ended At</span>
-                <span class="meta-value"><i class="fa-regular fa-clock text-secondary" style="margin-right: 6px;"></i> {{ format_datetime(report.ended_at) }}</span>
+                <span class="meta-value"><i class="fa-regular fa-clock text-secondary" style="margin-right: 6px;"></i> <span class="local-datetime" data-utc="{{ report.ended_at }}">{{ format_datetime(report.ended_at) }}</span></span>
             </div>
             <div class="meta-item">
                 <span class="meta-label">Call Duration</span>
