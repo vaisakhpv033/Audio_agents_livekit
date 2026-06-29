@@ -164,6 +164,16 @@
             </select>
         </div>
         
+        <div class="form-group">
+            <label for="language-select">Select Language</label>
+            <select id="language-select" class="form-control">
+                <option value="en">English (en-IN)</option>
+                <option value="ml">Malayalam (ml-IN)</option>
+                <option value="hi">Hindi (hi-IN)</option>
+                <option value="ta">Tamil (ta-IN)</option>
+            </select>
+        </div>
+        
         <div id="custom-inputs" class="hidden">
             <div class="form-row">
                 <div class="form-group half">
@@ -363,11 +373,13 @@ textarea.form-control {
     // Save configuration and rebuild widget
     applyBtn.addEventListener('click', () => {
         let personaData = {};
+        const selectedLanguage = document.getElementById('language-select').value;
         
         const selectedValue = personaSelect.value;
         if (selectedValue === 'custom') {
             personaData = {
                 persona: "custom",
+                language: selectedLanguage,
                 name: document.getElementById('custom-name').value,
                 age: parseInt(document.getElementById('custom-age').value) || 26,
                 occupation: document.getElementById('custom-occupation').value,
@@ -376,7 +388,8 @@ textarea.form-control {
             };
         } else {
             personaData = {
-                persona: selectedValue
+                persona: selectedValue,
+                language: selectedLanguage
             };
         }
         
@@ -396,13 +409,14 @@ textarea.form-control {
     // On Page Load: Retrieve and pre-fill form values
     window.addEventListener('DOMContentLoaded', () => {
         let savedPersona = localStorage.getItem('lk_agent_persona');
-        let personaData = { persona: 'default' };
+        let personaData = { persona: 'default', language: 'en' };
         
         if (savedPersona) {
             try {
                 personaData = JSON.parse(savedPersona);
                 // Pre-fill the form values
-                personaSelect.value = personaData.persona;
+                personaSelect.value = personaData.persona || 'default';
+                document.getElementById('language-select').value = personaData.language || 'en';
                 if (personaData.persona === 'custom') {
                     customInputs.classList.remove('hidden');
                     document.getElementById('custom-name').value = personaData.name || '';
