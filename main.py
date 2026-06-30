@@ -341,6 +341,11 @@ async def dashboard(request: Request):
             pass
             
     lk_agent_persona_json_escaped = html.escape(persona_json)
+    
+    # Retrieve agent type from cookie
+    agent_type = request.cookies.get("lk_agent_type", "agent1")
+    # Determine agent ID: Agent 1 (CA_5iixpgAFZLCw), STS Agent (CA_5LcV5zBscUja)
+    agent_id = "CA_5iixpgAFZLCw" if agent_type == "agent1" else "CA_5LcV5zBscUja"
         
     return templates.TemplateResponse(
         request=request,
@@ -352,7 +357,9 @@ async def dashboard(request: Request):
                 "avg_score": avg_score,
                 "readiness": readiness_counts
             },
-            "lk_agent_persona_json": lk_agent_persona_json_escaped
+            "lk_agent_persona_json": lk_agent_persona_json_escaped,
+            "lk_agent_id": agent_id,
+            "lk_agent_type": agent_type
         }
     )
 

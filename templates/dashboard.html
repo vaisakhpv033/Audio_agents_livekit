@@ -151,6 +151,14 @@
     </div>
     <div class="panel-body">
         <div class="form-group">
+            <label for="agent-select">Select Agent Type</label>
+            <select id="agent-select" class="form-control">
+                <option value="agent1" {% if lk_agent_type == 'agent1' %}selected{% endif %}>Agent 1 (Voice Agent)</option>
+                <option value="sts" {% if lk_agent_type == 'sts' %}selected{% endif %}>STS Agent (Speech-to-Speech)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
             <label for="persona-select">Select Persona Archetype</label>
             <select id="persona-select" class="form-control">
                 <option value="default">Default (Rahul - Polite Software Engineer)</option>
@@ -338,7 +346,7 @@ textarea.form-control {
 
 <script 
   src="https://cloud.livekit.io/embed-popup.js" 
-  data-lk-agent="CA_5iixpgAFZLCw" 
+  data-lk-agent="{{ lk_agent_id }}" 
   data-lk-color="#002CF2"
   data-lk-job-metadata='{{ lk_agent_persona_json | safe }}'
 ></script>
@@ -348,6 +356,7 @@ textarea.form-control {
     const trigger = document.getElementById('agent-config-trigger');
     const panel = document.getElementById('agent-config-panel');
     const closeBtn = document.getElementById('close-config-panel');
+    const agentSelect = document.getElementById('agent-select');
     const personaSelect = document.getElementById('persona-select');
     const customInputs = document.getElementById('custom-inputs');
     const applyBtn = document.getElementById('apply-config-btn');
@@ -395,6 +404,10 @@ textarea.form-control {
         
         // Save to localStorage so it persists on reload for form fields pre-fill
         localStorage.setItem('lk_agent_persona', JSON.stringify(personaData));
+        if (agentSelect) {
+            localStorage.setItem('lk_agent_type', agentSelect.value);
+            document.cookie = "lk_agent_type=" + encodeURIComponent(agentSelect.value) + "; path=/; max-age=31536000";
+        }
         
         // Save to cookie so the backend can read and render it in the static script tag
         document.cookie = "lk_agent_persona=" + encodeURIComponent(JSON.stringify(personaData)) + "; path=/; max-age=31536000";
@@ -410,6 +423,12 @@ textarea.form-control {
     window.addEventListener('DOMContentLoaded', () => {
         let savedPersona = localStorage.getItem('lk_agent_persona');
         let personaData = { persona: 'default', language: 'en' };
+        
+        // Restore agent selection
+        let savedAgentType = localStorage.getItem('lk_agent_type');
+        if (savedAgentType && agentSelect) {
+            agentSelect.value = savedAgentType;
+        }
         
         if (savedPersona) {
             try {
