@@ -179,6 +179,17 @@
                 <option value="ml">Malayalam (ml-IN)</option>
                 <option value="hi">Hindi (hi-IN)</option>
                 <option value="ta">Tamil (ta-IN)</option>
+                <option value="bn">Bengali (bn-IN)</option>
+                <option value="or">Odia (or-IN)</option>
+                <option value="zh">Chinese (zh-CN)</option>
+                <option value="pa">Punjabi (pa-IN)</option>
+                <option value="sd">Sindhi (sd-IN)</option>
+                <option value="gu">Gujarati (gu-IN)</option>
+                <option value="te">Telugu (te-IN)</option>
+                <option value="ur">Urdu (ur-IN)</option>
+                <option value="ko">Korean (ko-KR)</option>
+                <option value="kn">Kannada (kn-IN)</option>
+                <option value="ar">Arabic (ar-AE)</option>
             </select>
         </div>
         
@@ -361,6 +372,37 @@ textarea.form-control {
     const customInputs = document.getElementById('custom-inputs');
     const applyBtn = document.getElementById('apply-config-btn');
     
+    const stsOnlyLanguages = ['zh', 'sd', 'ur', 'ko', 'ar'];
+
+    function updateLanguageDropdown() {
+        const selectedAgent = agentSelect ? agentSelect.value : 'agent1';
+        const languageSelect = document.getElementById('language-select');
+        if (!languageSelect) return;
+        
+        Array.from(languageSelect.options).forEach(option => {
+            const isStsOnly = stsOnlyLanguages.includes(option.value);
+            if (selectedAgent === 'agent1') {
+                if (isStsOnly) {
+                    option.disabled = true;
+                    option.style.display = 'none';
+                    if (languageSelect.value === option.value) {
+                        languageSelect.value = 'en';
+                    }
+                } else {
+                    option.disabled = false;
+                    option.style.display = '';
+                }
+            } else {
+                option.disabled = false;
+                option.style.display = '';
+            }
+        });
+    }
+
+    if (agentSelect) {
+        agentSelect.addEventListener('change', updateLanguageDropdown);
+    }
+    
     // Toggle settings panel
     trigger.addEventListener('click', () => {
         panel.classList.toggle('hidden');
@@ -429,6 +471,8 @@ textarea.form-control {
         if (savedAgentType && agentSelect) {
             agentSelect.value = savedAgentType;
         }
+        
+        updateLanguageDropdown();
         
         if (savedPersona) {
             try {
