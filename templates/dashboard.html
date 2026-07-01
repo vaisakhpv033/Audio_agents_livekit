@@ -156,7 +156,7 @@
             <label for="agent-select">Select Agent Type</label>
             <select id="agent-select" class="form-control">
                 <option value="agent1" {% if lk_agent_type == 'agent1' %}selected{% endif %}>Agent 1 (Voice Agent)</option>
-                <option value="sts" {% if lk_agent_type == 'sts' %}selected{% endif %}>STS Agent (Speech-to-Speech)</option>
+                <option value="sts" {% if lk_agent_type != 'agent1' %}selected{% endif %}>STS Agent (Speech-to-Speech)</option>
             </select>
         </div>
         
@@ -170,7 +170,7 @@
                 <option value="skeptical">Skeptical Clerk (Suresh - Cautious & Distrustful)</option>
                 <option value="confused">Confused Homemaker (Sunita - Anxious & Hesitant)</option>
                 <option value="demanding">Expert Analyst (Ananya - Analytical & Challenging)</option>
-                <option value="wtw">WTW — Sarah Mitchell (PII & Eligibility Test)</option>
+                <option value="wtw" data-sts-only="true">WTW — Sarah Mitchell (PII & Eligibility Test)</option>
                 <option value="custom">Custom Persona...</option>
             </select>
         </div>
@@ -377,10 +377,42 @@ textarea.form-control {
     
     const stsOnlyLanguages = ['zh', 'sd', 'ur', 'ko', 'ar'];
 
+    // Update persona dropdown visibility based on agent type
+    function updatePersonaDropdown() {
+        const selectedAgent = agentSelect ? agentSelect.value : 'sts';
+        Array.from(personaSelect.options).forEach(option => {
+            if (option.dataset.stsOnly === 'true') {
+                if (selectedAgent !== 'sts') {
+                    option.disabled = true;
+                    option.style.display = 'none';
+                    // If WTW was selected but agent switched away from STS, reset to default
+                    if (personaSelect.value === option.value) {
+                        personaSelect.value = 'default';
+                    }
+                } else {
+                    option.disabled = false;
+                    option.style.display = '';
+                }
+            }
+        });
+    }
+
+    // Update language dropdown visibility based on persona and agent type
     function updateLanguageDropdown() {
-        const selectedAgent = agentSelect ? agentSelect.value : 'agent1';
+        const selectedAgent = agentSelect ? agentSelect.value : 'sts';
+        const selectedPersona = personaSelect ? personaSelect.value : 'default';
         const languageSelect = document.getElementById('language-select');
+        const languageGroup = languageSelect ? languageSelect.closest('.form-group') : null;
         if (!languageSelect) return;
+
+        // Hide entire language selector for WTW (always en-US)
+        if (selectedPersona === 'wtw') {
+            if (languageGroup) languageGroup.style.display = 'none';
+            languageSelect.value = 'en';
+            return;
+        } else {
+            if (languageGroup) languageGroup.style.display = '';
+        }
         
         Array.from(languageSelect.options).forEach(option => {
             const isStsOnly = stsOnlyLanguages.includes(option.value);
@@ -402,8 +434,14 @@ textarea.form-control {
         });
     }
 
+    // Consolidated update function
+    function updateConfigUI() {
+        updatePersonaDropdown();
+        updateLanguageDropdown();
+    }
+
     if (agentSelect) {
-        agentSelect.addEventListener('change', updateLanguageDropdown);
+        agentSelect.addEventListener('change', updateConfigUI);
     }
     
     // Toggle settings panel
@@ -415,13 +453,14 @@ textarea.form-control {
         panel.classList.add('hidden');
     });
     
-    // Toggle custom fields visibility based on dropdown
+    // Toggle custom fields and language visibility based on persona dropdown
     personaSelect.addEventListener('change', () => {
         if (personaSelect.value === 'custom') {
             customInputs.classList.remove('hidden');
         } else {
             customInputs.classList.add('hidden');
         }
+        updateLanguageDropdown();
     });
     
     // Save configuration and rebuild widget
@@ -475,7 +514,7 @@ textarea.form-control {
             agentSelect.value = savedAgentType;
         }
         
-        updateLanguageDropdown();
+        updateConfigUI();
         
         if (savedPersona) {
             try {
