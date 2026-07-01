@@ -74,7 +74,7 @@
                     <tbody>
                         {% for r in reports %}
                             <tr>
-                                <td class="col-customer-name"><i class="fa-regular fa-user text-secondary" style="margin-right: 6px;"></i> {{ r.customer_name or 'Rahul Nair' }}</td>
+                                <td class="col-customer-name"><i class="fa-regular fa-user text-secondary" style="margin-right: 6px;"></i> {{ r.customer_name or 'N/A' }}</td>
                                 <td class="col-agent-type"><i class="fa-solid fa-robot text-secondary" style="margin-right: 6px;"></i> {{ r.agent_type or 'Voice Agent' }}</td>
                                 <td class="col-sales-rep"><i class="fa-regular fa-id-card text-secondary" style="margin-right: 6px;"></i> {{ r.sales_rep or 'N/A' }}</td>
                                 <td class="local-datetime" data-utc="{{ r.started_at }}">{{ format_datetime(r.started_at) }}</td>
@@ -620,7 +620,7 @@ textarea.form-control {
 
                     tableHtml += `
                         <tr>
-                            <td class="col-customer-name"><i class="fa-regular fa-user text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.customer_name || 'Rahul Nair')}</td>
+                            <td class="col-customer-name"><i class="fa-regular fa-user text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.customer_name || 'N/A')}</td>
                             <td class="col-agent-type"><i class="fa-solid fa-robot text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.agent_type || 'Voice Agent')}</td>
                             <td class="col-sales-rep"><i class="fa-regular fa-id-card text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.sales_rep || 'N/A')}</td>
                             <td class="local-datetime" data-utc="${escapeHtml(r.started_at || '')}">${formattedTime}</td>

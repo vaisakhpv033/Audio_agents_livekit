@@ -187,7 +187,7 @@ def format_duration(seconds: int | None) -> str:
 templates.env.globals.update(format_datetime=format_datetime, format_duration=format_duration)
 
 def parse_room_details(room: str) -> dict:
-    customer_name = "Rahul Nair"
+    customer_name = "N/A"
     agent_type = "Voice Agent"
     sales_rep = "N/A"
     
