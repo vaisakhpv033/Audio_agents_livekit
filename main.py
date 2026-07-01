@@ -186,6 +186,44 @@ def format_duration(seconds: int | None) -> str:
 # Register helper functions
 templates.env.globals.update(format_datetime=format_datetime, format_duration=format_duration)
 
+def parse_room_details(room: str) -> dict:
+    customer_name = "Rahul Nair"
+    agent_type = "Voice Agent"
+    sales_rep = "N/A"
+    
+    if not room:
+        return {
+            "customer_name": customer_name,
+            "agent_type": agent_type,
+            "sales_rep": sales_rep
+        }
+        
+    # Check for "MF-[CustomerName]-[Sales]-Call" pattern (e.g. MF-RahulNair-SBI-Call)
+    if room.startswith("MF-") and room.endswith("-Call"):
+        parts = room.split("-")
+        if len(parts) >= 4:
+            cust = parts[1]
+            # Convert CamelCase or raw name into space-separated
+            import re
+            cust_split = re.findall(r'[A-Z][a-z]*', cust)
+            if cust_split:
+                customer_name = " ".join(cust_split)
+            else:
+                customer_name = cust
+    elif "mutual fund discussion" in room.lower():
+        parts = room.split(" ")
+        if len(parts) > 0:
+            customer_name = parts[0].capitalize()
+    elif room == "console-room":
+        customer_name = "Console User"
+        agent_type = "Voice Agent"
+        
+    return {
+        "customer_name": customer_name,
+        "agent_type": agent_type,
+        "sales_rep": sales_rep
+    }
+
 # Helper to evaluate and summarize in background
 async def evaluate_and_summarize(job_id: str, chat_history_str: str | None) -> None:
     try:
@@ -206,6 +244,11 @@ async def receive_report(payload: ReportPayload, background_tasks: BackgroundTas
         if payload.chat_history:
             chat_history_str = json.dumps(payload.chat_history)
             
+        parsed = parse_room_details(payload.room)
+        cust_name = payload.customer_name or parsed["customer_name"]
+        ag_type = payload.agent_type or parsed["agent_type"]
+        s_rep = payload.sales_rep or parsed["sales_rep"]
+            
         save_report(
             job_id=payload.job_id,
             room_id=payload.room_id,
@@ -215,7 +258,10 @@ async def receive_report(payload: ReportPayload, background_tasks: BackgroundTas
             summary=None,
             overall_score=0,
             chat_history=chat_history_str,
-            status="ongoing"
+            status="ongoing",
+            customer_name=cust_name,
+            agent_type=ag_type,
+            sales_rep=s_rep
         )
         
         # Start background evaluation task
@@ -267,6 +313,11 @@ async def get_reports_api():
                 if r_type in readiness_counts:
                     readiness_counts[r_type] += 1
             
+            parsed = parse_room_details(r.get("room"))
+            cust_name = r.get("customer_name") or parsed["customer_name"]
+            ag_type = r.get("agent_type") or parsed["agent_type"]
+            s_rep = r.get("sales_rep") or parsed["sales_rep"]
+            
             cleaned_reports.append({
                 "job_id": r.get("job_id"),
                 "room": r.get("room"),
@@ -275,7 +326,10 @@ async def get_reports_api():
                 "duration_seconds": r.get("duration_seconds"),
                 "overall_score": r.get("overall_score"),
                 "status": r.get("status"),
-                "scores": scores
+                "scores": scores,
+                "customer_name": cust_name,
+                "agent_type": ag_type,
+                "sales_rep": s_rep
             })
             
         if total_calls > 0:
@@ -320,6 +374,11 @@ async def dashboard(request: Request):
             r_type = scores["readiness"]
             if r_type in readiness_counts:
                 readiness_counts[r_type] += 1
+                
+        parsed = parse_room_details(r.get("room"))
+        r["customer_name"] = r.get("customer_name") or parsed["customer_name"]
+        r["agent_type"] = r.get("agent_type") or parsed["agent_type"]
+        r["sales_rep"] = r.get("sales_rep") or parsed["sales_rep"]
             
     if total_calls > 0:
         avg_score = int(avg_score / total_calls)

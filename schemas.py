@@ -38,3 +38,6 @@ class ReportPayload(BaseModel):
     ended_at: str
     summary: dict | str | None = None
     chat_history: dict | None = None
+    customer_name: str | None = None
+    agent_type: str | None = None
+    sales_rep: str | None = None

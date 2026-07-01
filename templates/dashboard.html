@@ -61,8 +61,9 @@
                 <table class="reports-table">
                     <thead>
                         <tr>
-                            <th>Job ID</th>
-                            <th>Room</th>
+                            <th>Customer AI Name</th>
+                            <th>Agent Type</th>
+                            <th>Sales Representative</th>
                             <th>Call Date</th>
                             <th>Duration</th>
                             <th>QA Score</th>
@@ -73,8 +74,9 @@
                     <tbody>
                         {% for r in reports %}
                             <tr>
-                                <td class="col-job" title="{{ r.job_id }}">{{ r.job_id[:12] }}...</td>
-                                <td class="col-room"><i class="fa-regular fa-comments text-secondary" style="margin-right: 6px;"></i> {{ r.room }}</td>
+                                <td class="col-customer-name"><i class="fa-regular fa-user text-secondary" style="margin-right: 6px;"></i> {{ r.customer_name or 'Rahul Nair' }}</td>
+                                <td class="col-agent-type"><i class="fa-solid fa-robot text-secondary" style="margin-right: 6px;"></i> {{ r.agent_type or 'Voice Agent' }}</td>
+                                <td class="col-sales-rep"><i class="fa-regular fa-id-card text-secondary" style="margin-right: 6px;"></i> {{ r.sales_rep or 'N/A' }}</td>
                                 <td class="local-datetime" data-utc="{{ r.started_at }}">{{ format_datetime(r.started_at) }}</td>
                                 <td>{{ format_duration(r.duration_seconds) }}</td>
                                 <td>
@@ -540,8 +542,9 @@ textarea.form-control {
                         <table class="reports-table">
                             <thead>
                                 <tr>
-                                    <th>Job ID</th>
-                                    <th>Room</th>
+                                    <th>Customer AI Name</th>
+                                    <th>Agent Type</th>
+                                    <th>Sales Representative</th>
                                     <th>Call Date</th>
                                     <th>Duration</th>
                                     <th>QA Score</th>
@@ -613,13 +616,13 @@ textarea.form-control {
                         return `${secs}s`;
                     };
 
-                    const shortJobId = r.job_id.substring(0, 12);
                     const formattedTime = window.formatLocalTime ? window.formatLocalTime(r.started_at) : (r.started_at || 'N/A');
 
                     tableHtml += `
                         <tr>
-                            <td class="col-job" title="${escapeHtml(r.job_id)}">${escapeHtml(shortJobId)}...</td>
-                            <td class="col-room"><i class="fa-regular fa-comments text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.room)}</td>
+                            <td class="col-customer-name"><i class="fa-regular fa-user text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.customer_name || 'Rahul Nair')}</td>
+                            <td class="col-agent-type"><i class="fa-solid fa-robot text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.agent_type || 'Voice Agent')}</td>
+                            <td class="col-sales-rep"><i class="fa-regular fa-id-card text-secondary" style="margin-right: 6px;"></i> ${escapeHtml(r.sales_rep || 'N/A')}</td>
                             <td class="local-datetime" data-utc="${escapeHtml(r.started_at || '')}">${formattedTime}</td>
                             <td>${formatDurationJS(r.duration_seconds)}</td>
                             <td>${scoreBadge}</td>

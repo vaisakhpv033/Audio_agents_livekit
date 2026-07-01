@@ -24,17 +24,26 @@ def init_db():
             overall_score INTEGER,
             created_at TEXT,
             chat_history TEXT,
-            status TEXT DEFAULT 'completed'
+            status TEXT DEFAULT 'completed',
+            customer_name TEXT,
+            agent_type TEXT,
+            sales_rep TEXT
         )
     """)
     
-    # Check if chat_history and status columns exist (dynamic migration)
+    # Check if chat_history, status, customer_name, agent_type, sales_rep columns exist (dynamic migration)
     cursor.execute("PRAGMA table_info(reports)")
     columns = [row[1] for row in cursor.fetchall()]
     if "chat_history" not in columns:
         cursor.execute("ALTER TABLE reports ADD COLUMN chat_history TEXT")
     if "status" not in columns:
         cursor.execute("ALTER TABLE reports ADD COLUMN status TEXT DEFAULT 'completed'")
+    if "customer_name" not in columns:
+        cursor.execute("ALTER TABLE reports ADD COLUMN customer_name TEXT")
+    if "agent_type" not in columns:
+        cursor.execute("ALTER TABLE reports ADD COLUMN agent_type TEXT")
+    if "sales_rep" not in columns:
+        cursor.execute("ALTER TABLE reports ADD COLUMN sales_rep TEXT")
         
     conn.commit()
     conn.close()
@@ -49,7 +58,10 @@ def save_report(
     overall_score: int | None,
     duration_seconds: int | None = None,
     chat_history: str | None = None,
-    status: str = "ongoing"
+    status: str = "ongoing",
+    customer_name: str | None = None,
+    agent_type: str | None = None,
+    sales_rep: str | None = None
 ) -> None:
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -82,8 +94,8 @@ def save_report(
     
     cursor.execute("""
         INSERT INTO reports (
-            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history, status, customer_name, agent_type, sales_rep
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id) DO UPDATE SET
             room_id=excluded.room_id,
             room=excluded.room,
@@ -94,7 +106,10 @@ def save_report(
             overall_score=excluded.overall_score,
             created_at=excluded.created_at,
             chat_history=excluded.chat_history,
-            status=excluded.status
+            status=excluded.status,
+            customer_name=excluded.customer_name,
+            agent_type=excluded.agent_type,
+            sales_rep=excluded.sales_rep
     """, (
         job_id,
         room_id,
@@ -106,7 +121,10 @@ def save_report(
         overall_score,
         now_iso,
         chat_history,
-        status
+        status,
+        customer_name,
+        agent_type,
+        sales_rep
     ))
     conn.commit()
     conn.close()
