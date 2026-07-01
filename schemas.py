@@ -41,3 +41,4 @@ class ReportPayload(BaseModel):
     customer_name: str | None = None
     agent_type: str | None = None
     sales_rep: str | None = None
+    scenario: str | None = None

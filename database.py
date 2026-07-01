@@ -27,7 +27,8 @@ def init_db():
             status TEXT DEFAULT 'completed',
             customer_name TEXT,
             agent_type TEXT,
-            sales_rep TEXT
+            sales_rep TEXT,
+            scenario TEXT DEFAULT 'sbi'
         )
     """)
     
@@ -44,6 +45,8 @@ def init_db():
         cursor.execute("ALTER TABLE reports ADD COLUMN agent_type TEXT")
     if "sales_rep" not in columns:
         cursor.execute("ALTER TABLE reports ADD COLUMN sales_rep TEXT")
+    if "scenario" not in columns:
+        cursor.execute("ALTER TABLE reports ADD COLUMN scenario TEXT DEFAULT 'sbi'")
         
     conn.commit()
     conn.close()
@@ -61,7 +64,8 @@ def save_report(
     status: str = "ongoing",
     customer_name: str | None = None,
     agent_type: str | None = None,
-    sales_rep: str | None = None
+    sales_rep: str | None = None,
+    scenario: str | None = "sbi"
 ) -> None:
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -94,8 +98,8 @@ def save_report(
     
     cursor.execute("""
         INSERT INTO reports (
-            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history, status, customer_name, agent_type, sales_rep
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            job_id, room_id, room, started_at, ended_at, duration_seconds, summary, overall_score, created_at, chat_history, status, customer_name, agent_type, sales_rep, scenario
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id) DO UPDATE SET
             room_id=excluded.room_id,
             room=excluded.room,
@@ -109,7 +113,8 @@ def save_report(
             status=excluded.status,
             customer_name=excluded.customer_name,
             agent_type=excluded.agent_type,
-            sales_rep=excluded.sales_rep
+            sales_rep=excluded.sales_rep,
+            scenario=excluded.scenario
     """, (
         job_id,
         room_id,
@@ -124,7 +129,8 @@ def save_report(
         status,
         customer_name,
         agent_type,
-        sales_rep
+        sales_rep,
+        scenario
     ))
     conn.commit()
     conn.close()

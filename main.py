@@ -225,9 +225,9 @@ def parse_room_details(room: str) -> dict:
     }
 
 # Helper to evaluate and summarize in background
-async def evaluate_and_summarize(job_id: str, chat_history_str: str | None) -> None:
+async def evaluate_and_summarize(job_id: str, chat_history_str: str | None, scenario: str | None = "sbi") -> None:
     try:
-        report_card, overall_score = await evaluate_chat_history(chat_history_str)
+        report_card, overall_score = await evaluate_chat_history(chat_history_str, scenario=scenario)
         if report_card:
             summary_json_str = json.dumps(report_card)
             update_report_summary(job_id, summary_json_str, overall_score, "completed")
@@ -248,6 +248,7 @@ async def receive_report(payload: ReportPayload, background_tasks: BackgroundTas
         cust_name = payload.customer_name or parsed["customer_name"]
         ag_type = payload.agent_type or parsed["agent_type"]
         s_rep = payload.sales_rep or parsed["sales_rep"]
+        scenario = payload.scenario or "sbi"
             
         save_report(
             job_id=payload.job_id,
@@ -261,11 +262,12 @@ async def receive_report(payload: ReportPayload, background_tasks: BackgroundTas
             status="ongoing",
             customer_name=cust_name,
             agent_type=ag_type,
-            sales_rep=s_rep
+            sales_rep=s_rep,
+            scenario=scenario
         )
         
         # Start background evaluation task
-        background_tasks.add_task(evaluate_and_summarize, payload.job_id, chat_history_str)
+        background_tasks.add_task(evaluate_and_summarize, payload.job_id, chat_history_str, scenario)
         return {"status": "success", "message": f"Report for job {payload.job_id} received. Evaluation started in background."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -284,7 +286,8 @@ async def retry_report_evaluation(job_id: str, background_tasks: BackgroundTasks
         raise HTTPException(status_code=404, detail="Report not found")
         
     update_report_summary(job_id, None, 0, "ongoing")
-    background_tasks.add_task(evaluate_and_summarize, job_id, report.get("chat_history"))
+    scenario = report.get("scenario", "sbi")
+    background_tasks.add_task(evaluate_and_summarize, job_id, report.get("chat_history"), scenario)
     return {"status": "success", "message": f"Retry evaluation started for job {job_id}."}
 
 @app.get("/api/reports")

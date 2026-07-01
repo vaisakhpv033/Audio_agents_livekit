@@ -136,7 +136,7 @@ GEMINI_QA_REPORT_SCHEMA = {
     ]
 }
 
-SYSTEM_PROMPT = """You are an expert SBI Mutual Fund sales trainer and quality analyst.
+SYSTEM_PROMPT_SBI = """You are an expert SBI Mutual Fund sales trainer and quality analyst.
 Your task is to evaluate the conversation between a sales representative and a prospective customer.
 Evaluate the sales representative only. Do not evaluate the customer.
 Use the entire conversation transcript as evidence. Be objective and specific.
@@ -151,6 +151,37 @@ Evaluate based on the following criteria:
 6. Recommendation Quality
 7. Compliance & Ethical Conduct
 8. Closing Effectiveness"""
+
+SYSTEM_PROMPT_WTW = """You are an expert Willis Towers Watson (WTW) benefits helpdesk quality analyst.
+Your task is to evaluate the conversation between a benefits helpdesk analyst and an employee caller.
+Evaluate the helpdesk analyst ONLY. Do not evaluate the caller.
+Use the entire conversation transcript as evidence. Be objective and specific.
+Do not invent information that was not present in the conversation.
+
+This is a WTW corporate benefits helpdesk call. The caller is an employee asking about a denied insurance claim and plan options.
+
+Evaluate based on the following criteria (mapped to the scoring categories):
+
+1. Rapport & Professionalism — Was the analyst professional, empathetic, and courteous?
+2. Discovery & Verification — Did the analyst properly verify the caller's identity WITHOUT reading back sensitive PII (SSN, DOB digits)? CRITICAL: If the analyst read back any SSN digits or full date of birth to the caller, this is a SEVERE compliance violation and must be scored 1-2.
+3. Product Knowledge (Plan & Policy Accuracy) — Did the analyst accurately explain plan rules? CRITICAL: If the analyst stated that mid-year plan changes are allowed without mentioning Qualifying Life Events (QLE) or Open Enrollment periods, this is an ACCURACY ERROR and must be scored 1-3.
+4. Communication Skills — Did the analyst explain out-of-network vs in-network coverage clearly and in plain language?
+5. Objection Handling (Caller Frustration Management) — How well did the analyst handle the caller's frustration about the denied claim?
+6. Recommendation Quality (Guidance & Next Steps) — Did the analyst provide actionable next steps (appeal process, finding in-network providers, etc.)?
+7. Compliance & Privacy Guardrails — Overall compliance assessment. ANY PII exposure (reading back SSN/DOB digits) is an automatic critical failure. Any inaccurate eligibility statements are compliance violations.
+8. Closing Effectiveness — Did the analyst summarize the resolution, confirm next steps, and close the call professionally?
+
+PAY SPECIAL ATTENTION TO THESE TWO PLANTED SCENARIOS:
+- PII EXPOSURE: If the analyst reads back, confirms, or repeats any digits of the caller's SSN or date of birth, flag this as a CRITICAL compliance violation in compliance_issues and score Discovery/Verification and Compliance categories severely (1-2 out of 10).
+- ELIGIBILITY ACCURACY: If the analyst says the caller can switch plans mid-year without mentioning QLE or Open Enrollment, flag this as an ACCURACY ERROR in compliance_issues and score Product Knowledge severely (1-3 out of 10).
+
+If the analyst correctly refuses to read back PII and correctly states that mid-year changes require a QLE, acknowledge these as strong compliance behaviors in positives."""
+
+# Map scenario identifiers to their system prompts
+SCENARIO_PROMPTS = {
+    "sbi": SYSTEM_PROMPT_SBI,
+    "wtw": SYSTEM_PROMPT_WTW,
+}
 
 def format_transcript_for_llm(chat_history_str: str | None) -> str:
     if not chat_history_str:
@@ -183,9 +214,10 @@ def format_transcript_for_llm(chat_history_str: str | None) -> str:
     except Exception as e:
         return f"Error parsing transcript: {e}"
 
-async def evaluate_chat_history(chat_history_str: str | None) -> Tuple[dict | None, int | None]:
+async def evaluate_chat_history(chat_history_str: str | None, scenario: str | None = "sbi") -> Tuple[dict | None, int | None]:
     """
     Calls Gemini API to evaluate the chat history.
+    Uses a scenario-specific system prompt for WTW vs SBI evaluations.
     Returns a tuple: (report_card_dict, overall_score) or (None, None) on failure.
     """
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -195,7 +227,8 @@ async def evaluate_chat_history(chat_history_str: str | None) -> Tuple[dict | No
 
     transcript = format_transcript_for_llm(chat_history_str)
     
-    prompt = f"{SYSTEM_PROMPT}\n\nHere is the conversation transcript:\n{transcript}"
+    system_prompt = SCENARIO_PROMPTS.get(scenario or "sbi", SYSTEM_PROMPT_SBI)
+    prompt = f"{system_prompt}\n\nHere is the conversation transcript:\n{transcript}"
     
     # Model URL Options:
     # Gemini 2.5 Flash:
